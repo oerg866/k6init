@@ -1,0 +1,23 @@
+
+!INCLUDE        <standard.mak>
+!INCLUDE        <keepc.mak>
+
+TARGETS : K6INIT.EXE
+
+clean:
+  del *.obj
+  del *.exe
+
+k6cpu.obj : k6cpu.asm
+  $(ASSEMBLE) k6cpu.asm
+
+k6init.obj : k6init.c
+
+main.obj : main.c
+  $(COMPILE) main.c
+
+#   Link with DRIVER.ASM, CRTDRVR.LIB and CRTKEEPC.LIB
+
+K6INIT.EXE : clean k6cpu.obj k6init.obj main.obj
+  $(LINK) driver+crtdrvr.lib+crtkeepc.lib+k6cpu+k6init+main,K6INIT.EXE;
+
