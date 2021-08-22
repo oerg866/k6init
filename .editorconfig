@@ -1,0 +1,10 @@
+# top-most EditorConfig file
+root = true
+
+# DOS-style newlines + extra newline
+[*]
+end_of_line = crlf
+insert_final_newline = true
+charset = latin1
+indent_size = 4
+indent_style = space
