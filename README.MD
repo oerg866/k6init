@@ -29,9 +29,11 @@ NO! I'm still learning.
 * Find and check for supported CPU types using `cpuid`
   * yes
 * Find VESA BIOS and VESA modes
-  * yes / not complete
+  * yes
 * Find LFB address
-  * No
+  * yes
+* Set MTRR to enable Write combining for LFB
+  * yes
 * Detect total available system memory and set WA mode
   * No
 * Detect 15-16M Memory hole for WA
@@ -85,9 +87,12 @@ I developed this on an AMD K6-II CXT 500MHz. DOS is not the most stable and easy
 
 You'll get weird errors otherwise. It's something to do with XMS size. I can get this to compile with JemmEx when limiting its reported size to 32MiB.
 
+QEMM '97 also works, but after a while I got really strange behavior. I cannot open K6init.h (and only that file) properly via network share anymore.
+
 ### Linker doesn't run when DPMI host is running
 
-I couldn't really fix this, so I took the linker (`LINK.EXE` and `CVPACK.EXE`) from Microsoft Visual C++ 1.52. **NOTE:** The linker from VC1.52 requires a 32-Bit DOS Extender, like HXDOS.
+I couldn't really fix this, so I took the linker (`LINK.EXE` and `CVPACK.EXE`) from Microsoft Visual C++ 1.52. **NOTE:** The linker from VC1.52 requires a 32-Bit DOS Extender.
+VC1.52 includes one in the form of `DOSXNT.EXE`
 
 ### CodeView doesn't run when DPMI host is running
 
