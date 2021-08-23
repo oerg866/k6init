@@ -157,3 +157,15 @@ error:
     return -1;
 }
 
+int enableWriteCombiningForLFBs(void) {
+
+    mtrrConfigInfo mtrrConfig;
+    int amountOfLFBs = 0;
+    int result = 0;
+
+    // Probe VESA BIOS first to find LFBs and VRAM size
+
+    amountOfLFBs = findLFBs(&mtrrConfig);
+
+}
+

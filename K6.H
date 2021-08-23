@@ -40,6 +40,6 @@ int checkSupportedCPU(void);
 
 // VESA LFB functionality
 
-int findLFBs(void);
+int enableWriteCombiningForLFBs(void);
 
 #endif

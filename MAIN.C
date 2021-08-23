@@ -54,7 +54,10 @@ int main (int argc, char **argv)
         goto cleanup; 
     }
 
-    findLFBs();
+    if (!enableWriteCombiningForLFBs()) {
+        printf("Failed to enable Write Combining.\n");
+        goto cleanup;
+    }
 
     /*  Parse the command line.  */
 
