@@ -24,6 +24,9 @@ typedef struct
 
 } vbeInfo;
 
+#define vbeMaximumModeEntries ((512-16)/2)
+
+
 typedef struct
 {
     unsigned short supportedInHardware : 1;
