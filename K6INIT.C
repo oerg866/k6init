@@ -212,6 +212,78 @@ error:
     return -1;
 }
 
+static unsigned long getMTRRRangeForSize(unsigned long size) {
+    // 15 bit mask
+
+    /*
+        111 1111 1111 1111 128K
+        111 1111 1111 1110 256K
+        111 1111 1111 1100 512K
+        111 1111 1111 1000 1M
+        ...
+        100 0000 0000 0000 2G
+        000 0000 0000 0000 4G
+    */
+
+    unsigned long mask = 0xFFFFFFFFUL;
+    unsigned long shiftReference = 128UL * 1024UL;
+
+    /*
+        Shift the reference of 128K left (doubling it with each step
+        and along with it the mask, until this reference is bigger
+        than the requested size. The result & 7FFF is our mask.
+    */
+
+    while(shiftReference < size) {
+        mask <<= 1UL;
+        shiftReference <<= 1UL;
+    }
+
+    mask &= 0x00007FFFUL;
+    return mask;
+}
+
+static int setupMTRRs(mtrrConfigInfo* mtrrConfig) {
+
+    unsigned short i = 0;
+    unsigned long mtrrValue = 0UL;
+    unsigned long mtrrMask = 0UL;
+    unsigned long mtrrAddress = 0UL;
+
+
+    if (mtrrConfig == NULL) {
+        printf("mtrrConfig is NULL! Aborting...\n");
+        return -1;
+    }
+
+    for (i = 0; i < mtrrConfig->mtrrCount; i++) {
+
+        mtrrValue = 0UL;
+
+        // Set MTRR to Write Combining Memory Type (bit 1)
+        mtrrValue |= 0x00000002UL;
+
+        // Set Physical Base Address (bits 17 - 31)
+        // Most significant 15 bits of the physical address.
+        mtrrAddress = mtrrConfig->mtrrs[i];
+        mtrrValue |= mtrrAddress & 0xFFFE0000UL;
+
+        // Set Physical Address Mask (bits 2 - 16)
+        mtrrMask = getMTRRRangeForSize(mtrrConfig->mtrrSizes[i]);
+        mtrrMask <<= 2UL;
+        mtrrValue |= mtrrMask;
+
+        printf("Configuring MTRR0: %08lx, size %lu -> %08lx \n",
+            mtrrConfig->mtrrs[i],
+            mtrrConfig->mtrrSizes[i],
+            mtrrValue);
+
+        // Now configure actual MTRR register
+        k6_setMTRR(i, mtrrValue);
+    }
+
+}
+
 int enableWriteCombiningForLFBs(void) {
 
     mtrrConfigInfo mtrrConfig;
@@ -222,5 +294,12 @@ int enableWriteCombiningForLFBs(void) {
 
     amountOfLFBs = findLFBs(&mtrrConfig);
 
+    // Set up the processor MTRR registers for these LFBs.
+    // TODO: If only 1 LFB is found, consider making an MTRR
+    // config for legacy VGA memory region
+
+    result = setupMTRRs(&mtrrConfig);
+
+    return result;
 }
 

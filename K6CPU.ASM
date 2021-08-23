@@ -8,6 +8,8 @@
 k6_getCPUIdentifier     PROTO C cpuidString:FAR PTR CHAR
 k6_getCPUProcessorType  PROTO C
 
+k6_setMTRR              PROTO C mtrrIndex:WORD, mtrrValue:DWORD
+
 k6_getVBEInfoBlock      PROTO C vbeInfoBlockPtr:FAR PTR BYTE
 k6_getVBEModeInfo       PROTO C videoMode:WORD, vbeModeInfoPtr:FAR PTR BYTE
 
@@ -59,6 +61,51 @@ k6_getCPUProcessorType PROC C uses ebx ecx edx
     ret
 
 k6_getCPUProcessorType ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; setMTRR
+;
+; Sets the MTRR of a given index to a given value. The value, including
+; its bitfields must be calculated properly by the caller.
+;
+; Parameters: MTRR index (0 or 1)
+;             MTRR value 
+
+k6_setMTRR PROC C USES eax ebx ecx edx, mtrrIndex:WORD, mtrrValue:DWORD
+
+k6_MSR_UWCCR    EQU 0C0000085h
+
+    ; MSR register ID needs to go in ecx
+
+    mov ecx, k6_MSR_UWCCR ; UC/WC Cacheability Control Register (UWCCR)
+    xor ebx, ebx
+    mov bx, mtrrIndex
+    add ecx, ebx
+
+    ; First read the MSR because we only change 1 dword
+
+    rdmsr
+
+    ; MTRR0 = eax
+    ; MTRR1 = edx
+
+    ; if mtrrIndex = 1, then we write into edx, else eax
+
+    cmp ebx, 0
+    jnz writeMTRR1
+
+writeMTRR0:
+    mov eax, mtrrValue
+    jmp @f
+
+writeMTRR1:
+    mov edx, mtrrValue
+
+@@:
+    wrmsr
+    ret
+
+k6_setMTRR ENDP
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; getVBEInfoBlock
