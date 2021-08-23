@@ -120,12 +120,8 @@ int findLFBs(void) {
 
     printf("Querying VESA modes to find LFB address...\n"); 
 
-    // TODO: This is broken, the end of list marker 0xffff 
-    // is not found on my GeForce 2 GTS?
+    for (i = 0; vbeInfoPtr->videoModeListPtr[i] != 0xFFFF; i++) {
 
-//    for (i = 0; vbeInfoPtr->videoModeListPtr[i] != 0xFFFF; i++) {
-
-    for (i = 0; i < 16; i++) {
         currentMode = vbeInfoPtr->videoModeListPtr[i]; 
 
         printf("Found Mode %03hx, ", currentMode);
