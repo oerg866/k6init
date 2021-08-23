@@ -16,7 +16,7 @@ typedef struct
     unsigned long _far *                // FAR Pointer to OEM String
         oemStringPtr;
     unsigned char capabilities[4];      // ??
-    unsigned long _far *
+    unsigned short _far *
         videoModeListPtr;               // FAR Pointer to video mode list
     unsigned short totalMemory;         // # of 64KiB blocks
 
