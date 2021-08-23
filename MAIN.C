@@ -72,7 +72,7 @@ cleanup:
 static void PutError (char *str, ...)
 {
     va_list va_start (argptr, str);
-    printf "\n%s error:  ", k_program_name);
+    printf("\n%s error:  ", k_program_name);
     vprintf(str, argptr);
     printf("\n");
     va_end(argptr);
