@@ -63,6 +63,7 @@ static int findLFBs(mtrrConfigInfo* mtrrConfig) {
     unsigned short i;
     unsigned short currentMode;
 
+    unsigned long videoMemorySize = 0L;
     printf("Attempting to find Linear Frame Buffer (LFB) region(s)...\n");
     printf("Probing VGA BIOS for VBEs...\n");
 
@@ -101,6 +102,10 @@ static int findLFBs(mtrrConfigInfo* mtrrConfig) {
         vbeInfoPtr->vbeSignature,
         vbeVersionMajor,
         vbeVersionMinor);
+
+    videoMemorySize = ((unsigned long) vbeInfoPtr->totalMemory) * 65536UL;
+
+    printf("Total video memory: %lu Bytes\n", videoMemorySize);
 
     // Copy out OEM version string (Yay far pointers)
 
