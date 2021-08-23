@@ -127,17 +127,23 @@ int findLFBs(void) {
 
         currentMode = vbeInfoPtr->videoModeListPtr[i]; 
 
-        printf("Found Mode %03hx, ", currentMode);
         ret = k6_getVBEModeInfo(currentMode, 
             (vbeModeInfo _far*) vbeModeInfoPtr);
 
-        printf("ret: %04hx - Resolution: %ux%u - BPP: %u\n",
+        // ret = return code from query call
+
+        /*
+
+        TODO: Add loglevel based debug print function
+
+        printf("ret: %04hx - Resolution: %ux%u - BPP: %u - Attr: %04x\n",
             ret,
             vbeModeInfoPtr->width,
             vbeModeInfoPtr->height,
-            vbeModeInfoPtr->bpp);
+            vbeModeInfoPtr->bpp,
+            *(unsigned short*) &vbeModeInfoPtr->attributes);
+        */
 
-        // ret = return code from query call 
     } 
 
     free(vbeModeInfoPtr); 
