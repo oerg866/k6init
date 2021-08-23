@@ -32,7 +32,7 @@ extern cpuidProcessorType k6_getCPUProcessorType(void);
 extern void k6_setMTRR(unsigned short index, unsigned long value);
 
 extern unsigned short k6_getVBEInfoBlock(vbeInfo _far *vbeInfoBlockPtr);
-extern unsigned short k6_getVBEModeInfo(unsigned short videoMode, 
+extern unsigned short k6_getVBEModeInfo(unsigned short videoMode,
                                         vbeModeInfo _far *vbeModeInfoPtr);
 
 // k6init functionality

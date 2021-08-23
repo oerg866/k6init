@@ -30,7 +30,7 @@ typedef struct
 typedef struct
 {
     unsigned short supportedInHardware : 1;
-    unsigned short reserved : 1; 
+    unsigned short reserved : 1;
     unsigned short ttyBIOSSupport : 1;
     unsigned short isColorMode : 1;
     unsigned short isGraphicsMode : 1;

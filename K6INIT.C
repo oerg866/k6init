@@ -6,7 +6,7 @@
 
 int checkAuthenticAMD(void)
 {
-    char cpuidString[12+1];  // 3 DWORDs + 1 null term byte 
+    char cpuidString[12+1];  // 3 DWORDs + 1 null term byte
 
     cpuidString[12] = 0x00;  // null terminator
 
@@ -23,9 +23,9 @@ int checkSupportedCPU(void)
 
     cpu = k6_getCPUProcessorType();
 
-    printf("CPU Family %02lx model %02lx stepping %02lx\n", 
-        cpu.family, 
-        cpu.model, 
+    printf("CPU Family %02lx model %02lx stepping %02lx\n",
+        cpu.family,
+        cpu.model,
         cpu.stepping);
 
     // Supported CPUs
@@ -84,7 +84,7 @@ static int findLFBs(mtrrConfigInfo* mtrrConfig) {
     }
 
     printf("Attempting to find Linear Frame Buffer (LFB) region(s)...\n");
-    printf("Probing VGA BIOS for VBEs...\n");
+    printf("Probing VGA BIOS for VBE support...\n\n");
 
     // Allocate memory for VBE (Mode) Info structures
 
@@ -103,7 +103,7 @@ static int findLFBs(mtrrConfigInfo* mtrrConfig) {
     memset(oemVersionString, 0, sizeof(oemVersionString));
     memset(mtrrConfig, 0, sizeof(mtrrConfigInfo));
 
-    // A VBE Info Block request must happen with the target block's 
+    // A VBE Info Block request must happen with the target block's
     // Signature field set to "VBE2"
 
     memcpy(vbeInfoPtr->vbeSignature, "VBE2", 4);
@@ -134,25 +134,25 @@ static int findLFBs(mtrrConfigInfo* mtrrConfig) {
     printf("VESA BIOS OEM Version String: %s\n", oemVersionString);
 
     // If we have VESA version before 2.xx, we have to stop because
-    // VESA only introduced LFBs starting at 2.xx. 
+    // VESA only introduced LFBs starting at 2.xx.
 
     if (vbeVersionMajor < 2) {
         printf("VBE Version before 2.00. No LFB detection possible.\n");
         goto error;
     }
 
-    // Query all video modes to find those with LFBs. 
+    // Query all video modes to find those with LFBs.
 
-    printf("Querying VESA modes to find LFB address...\n"); 
+    printf("Querying VESA modes to find LFB address...\n\n");
 
     for (i = 0; vbeInfoPtr->videoModeListPtr[i] != 0xFFFF; i++) {
         if (i > vbeMaximumModeEntries) {
             break;
         }
 
-        currentMode = vbeInfoPtr->videoModeListPtr[i]; 
+        currentMode = vbeInfoPtr->videoModeListPtr[i];
 
-        ret = k6_getVBEModeInfo(currentMode, 
+        ret = k6_getVBEModeInfo(currentMode,
             (vbeModeInfo _far*) vbeModeInfoPtr);
 
         // ret = return code from query call
@@ -207,8 +207,8 @@ static int findLFBs(mtrrConfigInfo* mtrrConfig) {
 
 // TODO: Make this more elegant :/
 error:
-    free(vbeModeInfoPtr); 
-    free(vbeInfoPtr); 
+    free(vbeModeInfoPtr);
+    free(vbeInfoPtr);
     return -1;
 }
 
@@ -301,5 +301,6 @@ int enableWriteCombiningForLFBs(void) {
     result = setupMTRRs(&mtrrConfig);
 
     return result;
+
 }
 

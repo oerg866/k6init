@@ -37,7 +37,7 @@ k6_getCPUIdentifier PROC C USES eax ebx ecx edx esi,cpuidString:FAR PTR CHAR
     mov [si+04h], edx
     mov [si+08h], ecx
 
-    ret 
+    ret
 
 k6_getCPUIdentifier ENDP
 
@@ -69,7 +69,7 @@ k6_getCPUProcessorType ENDP
 ; its bitfields must be calculated properly by the caller.
 ;
 ; Parameters: MTRR index (0 or 1)
-;             MTRR value 
+;             MTRR value
 
 k6_setMTRR PROC C USES eax ebx ecx edx, mtrrIndex:WORD, mtrrValue:DWORD
 
@@ -122,7 +122,7 @@ k6_getVBEInfoBlock PROC C USES bx cx dx es di,vbeInfoBlockPtr:FAR PTR BYTE
     int 10h
 
     ; AX = Return value of the call
-    ret 
+    ret
 
 k6_getVBEInfoBlock ENDP
 
@@ -131,7 +131,7 @@ k6_getVBEInfoBlock ENDP
 ;
 ; reads the mode info for a given VESA mode from the VESA BIOS.
 ;
-; Parameters: mode index 
+; Parameters: mode index
 ;             pointer to a memory location to copy the VBE Mode Info to.
 ; Returns: Return value of the call
 

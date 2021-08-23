@@ -41,17 +41,17 @@ int main (int argc, char **argv)
 {
     printf("%s Version %d.%02d\n", k_program_name, k_version_major, k_version_minor);
     printf("%s\n", k_copyright_text);
-    printf("%s\n", k_contact_info); 
+    printf("%s\n", k_contact_info);
     printf("===============================================================================\n");
 
     if (!checkAuthenticAMD()) {
-        printf("You don't have an AMD CPU. Aborting.\n"); 
+        printf("You don't have an AMD CPU. Aborting.\n");
         goto cleanup;
     }
 
     if (!checkSupportedCPU()) {
         printf("Aborting\n");
-        goto cleanup; 
+        goto cleanup;
     }
 
     if (!enableWriteCombiningForLFBs()) {
