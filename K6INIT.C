@@ -53,6 +53,17 @@ int checkSupportedCPU(void)
     return 1;
 }
 
+static int isKnownLFB(unsigned long *lfbList, unsigned long lfbToCheck) {
+    int i;
+
+    for (i = 0; i < k6_maximumLFBCount; i++) {
+        if (lfbList[i] == lfbToCheck) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 static int findLFBs(mtrrConfigInfo* mtrrConfig) {
 
     vbeInfo *vbeInfoPtr;
@@ -64,6 +75,14 @@ static int findLFBs(mtrrConfigInfo* mtrrConfig) {
     unsigned short currentMode;
 
     unsigned long videoMemorySize = 0L;
+
+    int foundLFB = 0;
+
+    if (mtrrConfig == NULL) {
+        printf("mtrrConfig is NULL! Aborting...\n");
+        goto error;
+    }
+
     printf("Attempting to find Linear Frame Buffer (LFB) region(s)...\n");
     printf("Probing VGA BIOS for VBEs...\n");
 
@@ -82,6 +101,7 @@ static int findLFBs(mtrrConfigInfo* mtrrConfig) {
     memset(vbeInfoPtr, 0, sizeof(vbeInfo));
     memset(vbeModeInfoPtr, 0, sizeof(vbeModeInfo));
     memset(oemVersionString, 0, sizeof(oemVersionString));
+    memset(mtrrConfig, 0, sizeof(mtrrConfigInfo));
 
     // A VBE Info Block request must happen with the target block's 
     // Signature field set to "VBE2"
@@ -149,11 +169,41 @@ static int findLFBs(mtrrConfigInfo* mtrrConfig) {
             *(unsigned short*) &vbeModeInfoPtr->attributes);
         */
 
-    } 
+        // check if current mode has LFB capability
 
-    free(vbeModeInfoPtr); 
-    free(vbeInfoPtr); 
-    return 1;
+        if (vbeModeInfoPtr->attributes.hasLFB) {
+
+            // we support a maximum of two LFB regions
+            // (there are two MTRRs on the supported CPUs)
+
+            // If this mode has not yet a known LFB address, save it.
+
+            if (!isKnownLFB(mtrrConfig->mtrrs, vbeModeInfoPtr->framebuffer)) {
+                printf("Found LFB%d at address %08lx.\n",
+                    foundLFB,
+                    vbeModeInfoPtr->framebuffer);
+
+                mtrrConfig->mtrrs[foundLFB] = vbeModeInfoPtr->framebuffer;
+                mtrrConfig->mtrrSizes[foundLFB] = videoMemorySize;
+                foundLFB++;
+            }
+
+            // If we exceed two LFBs, we stop processing the VESA modes.
+
+            if (foundLFB == k6_maximumMTRRCount) {
+                break;
+            }
+        }
+    }
+
+
+    mtrrConfig->mtrrCount = foundLFB;
+
+    free(vbeModeInfoPtr);
+    free(vbeInfoPtr);
+
+
+    return foundLFB;
 
 // TODO: Make this more elegant :/
 error:
