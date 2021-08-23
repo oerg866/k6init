@@ -22,7 +22,7 @@ k6_getVBEModeInfo       PROTO C videoMode:WORD, vbeModeInfoPtr:FAR PTR BYTE
 ;
 ; Parameters: Pointer to 12 byte memory buffer for the string.
 
-k6_getCPUIdentifier PROC  C USES eax ebx ecx edx esi,cpuidString:FAR PTR CHAR
+k6_getCPUIdentifier PROC C USES eax ebx ecx edx esi,cpuidString:FAR PTR CHAR
 
     mov si, word ptr cpuidString
 
@@ -115,7 +115,7 @@ k6_setMTRR ENDP
 ; Parameter: Pointer to a memory location to copy the VBE Info block to.
 ; Returns: Return value of the call
 
-k6_getVBEInfoBlock PROC C USES es di,vbeInfoBlockPtr:FAR PTR BYTE
+k6_getVBEInfoBlock PROC C USES bx cx dx es di,vbeInfoBlockPtr:FAR PTR BYTE
 
     les di, vbeInfoBlockPtr
     mov ax, 4f00h
@@ -136,7 +136,7 @@ k6_getVBEInfoBlock ENDP
 ; Returns: Return value of the call
 
 
-k6_getVBEModeInfo PROC C USES cx es di,videoMode:WORD,vbeModeInfoPtr:FAR PTR BYTE
+k6_getVBEModeInfo PROC C USES bx cx dx es di,videoMode:WORD,vbeModeInfoPtr:FAR PTR BYTE
 
     les di, vbeModeInfoPtr
     mov ax, 4f01h
