@@ -121,6 +121,9 @@ int findLFBs(void) {
     printf("Querying VESA modes to find LFB address...\n"); 
 
     for (i = 0; vbeInfoPtr->videoModeListPtr[i] != 0xFFFF; i++) {
+        if (i > vbeMaximumModeEntries) {
+            break;
+        }
 
         currentMode = vbeInfoPtr->videoModeListPtr[i]; 
 
