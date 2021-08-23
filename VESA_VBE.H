@@ -26,7 +26,25 @@ typedef struct
 
 typedef struct
 {
-    unsigned short attributes;          // deprecated, only bit 7 relevant
+    unsigned short supportedInHardware : 1;
+    unsigned short reserved : 1; 
+    unsigned short ttyBIOSSupport : 1;
+    unsigned short isColorMode : 1;
+    unsigned short isGraphicsMode : 1;
+    unsigned short isVGACompatible : 1;
+    unsigned short hasVGACompatibleWindowedMode : 1;
+    unsigned short hasLFB : 1;
+    unsigned short hasDoubleScan : 1;
+    unsigned short hasInterlaced : 1;
+    unsigned short hasHWTripleBuffer : 1;
+    unsigned short hasHWStereoscopic : 1;
+    unsigned short hasDualDisplayStartAddress : 1;
+    unsigned short reserved2 : 3;
+} vbeModeAttributes;
+
+typedef struct
+{
+    vbeModeAttributes attributes;       // deprecated, only bit 7 relevant
                                         // indicates the mode supports a linear frame buffer.
     unsigned char window_a;             // deprecated
     unsigned char window_b;             // deprecated
