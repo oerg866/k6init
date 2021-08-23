@@ -10,10 +10,19 @@
 #ifndef __K6_H
 #define __K6_H
 
-typedef struct
-{
+// Constants
+
+#define k6_maximumMTRRCount  2
+
+typedef struct {
     unsigned long stepping : 4, model : 4, family : 4, type : 2;
 } cpuidProcessorType;
+
+typedef struct {
+    unsigned short mtrrCount;
+    unsigned long mtrrs[k6_maximumMTRRCount];
+    unsigned long mtrrSizes[k6_maximumMTRRCount];
+} mtrrConfigInfo;
 
 // k6.asm exports
 
