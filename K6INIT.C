@@ -53,7 +53,7 @@ int checkSupportedCPU(void)
     return 1;
 }
 
-int findLFBs(void) {
+static int findLFBs(mtrrConfigInfo* mtrrConfig) {
 
     vbeInfo *vbeInfoPtr;
     vbeModeInfo *vbeModeInfoPtr;
