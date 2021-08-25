@@ -5,6 +5,8 @@
     .model small, c
     .586p
 
+k6_getMemorySize        PROTO C memSizeBelow16M:FAR PTR DWORD, memSizeAbove16M:FAR PTR DWORD
+
 k6_getCPUIdentifier     PROTO C cpuidString:FAR PTR CHAR
 k6_getCPUProcessorType  PROTO C
 
@@ -14,6 +16,64 @@ k6_getVBEInfoBlock      PROTO C vbeInfoBlockPtr:FAR PTR BYTE
 k6_getVBEModeInfo       PROTO C videoMode:WORD, vbeModeInfoPtr:FAR PTR BYTE
 
     .CODE
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; getMemorySize
+;
+; Parameters: pointer to DWORD to put the size below 16M in bytes in 
+;             pointer to DWORD to put the size above 16M in bytes in 
+; Returns: 1 in ax on success, 0 if not.
+
+k6_getMemorySize PROC C uses ebx ecx edx es di,memSizeBelow16M:FAR PTR DWORD, memSizeAbove16M:FAR PTR DWORD
+
+    ; Int15 call
+
+    mov eax, 0e801h
+    clc
+    int 15h
+
+    ; Carry flag set = call failed
+
+    jc error
+
+    ; If CX/DX are clear, use AX/BX instead
+
+    cmp cx, 00h
+    je useaxbx
+
+    mov ax, cx
+    mov bx, dx
+
+useaxbx:
+
+    ; At this point:
+    ; AX = Mem between 1M and 16M in K
+    ; BX = Mem above 16M in 64K blocks
+
+    and eax, 0ffffh
+    and ebx, 0ffffh
+
+    ; Convert both block sizes to bytes
+
+    shl eax, 10
+    shl ebx, 16
+
+    les di, dword ptr memSizeBelow16M
+    mov dword ptr es:[di], eax
+    les di, dword ptr memSizeAbove16M
+    mov dword ptr es:[di], ebx
+
+    mov eax, 1
+    jp done
+
+error:
+    mov eax, 0
+
+done:
+    ret
+
+k6_getMemorySize ENDP
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; getCPUIdentifier

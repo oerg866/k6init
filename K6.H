@@ -26,6 +26,8 @@ typedef struct {
 
 // k6.asm exports
 
+extern unsigned short k6_getMemorySize(unsigned long _far *memorySizeBelow16M, unsigned long _far *memorySizeAbove16M);
+
 extern void k6_getCPUIdentifier(char _far *cpuidString);
 extern cpuidProcessorType k6_getCPUProcessorType(void);
 
