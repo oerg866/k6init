@@ -56,7 +56,7 @@ int checkSupportedCPU(void)
 static int isKnownLFB(unsigned long *lfbList, unsigned long lfbToCheck) {
     int i;
 
-    for (i = 0; i < k6_maximumLFBCount; i++) {
+    for (i = 0; i < k6_maximumMTRRCount; i++) {
         if (lfbList[i] == lfbToCheck) {
             return 1;
         }
