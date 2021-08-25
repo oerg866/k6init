@@ -74,7 +74,7 @@ static int findLFBs(mtrrConfigInfo* mtrrConfig) {
     unsigned short i;
     unsigned short currentMode;
 
-    unsigned long videoMemorySize = 0L;
+    unsigned long videoMemorySize = 0UL;
 
     int foundLFB = 0;
 
@@ -298,9 +298,106 @@ int enableWriteCombiningForLFBs(void) {
     // TODO: If only 1 LFB is found, consider making an MTRR
     // config for legacy VGA memory region
 
+    // TODO: Allow custom regions.
+
     result = setupMTRRs(&mtrrConfig);
 
     return result;
 
 }
 
+
+unsigned long getMemorySize(void) {
+
+    // Basically a wrapper function for k6_getMemorySize
+    // which is cumbersome to use.
+    // The reason for that is that asm PROCs cannot return
+    // 32-bit values for some reason. Old compilers innit'
+
+    unsigned long memSizeBelow16M = 0UL;
+    unsigned long memSizeAbove16M = 0UL;
+    unsigned long memSizeTotal = 0UL;
+    unsigned short ret;
+
+    ret = k6_getMemorySize((unsigned long _far*) &memSizeBelow16M,
+            (unsigned long _far*) &memSizeAbove16M);
+
+    printf("ret %u, below 16m: %lu above 16m: %lu\n\n",
+        ret,
+        memSizeBelow16M,
+        memSizeAbove16M);
+
+    if (!ret) {
+        return 0;
+    }
+
+
+    if (memSizeAbove16M == 0) {
+        // If we have <=16MB
+        memSizeTotal = memSizeBelow16M + (1UL * 1024UL * 1024UL);
+    } else {
+        memSizeTotal = memSizeAbove16M + (16UL * 1024UL * 1024UL);
+    }
+
+    return memSizeTotal;
+}
+
+static int hasMemoryHole(void) {
+
+    // This function finds out whether or not we have
+    // a 15-16M memory hole.
+    // -1 = error
+
+    unsigned long memSizeBelow16M = 0UL;
+    unsigned long memSizeAbove16M = 0UL;
+
+    unsigned short ret;
+
+    ret = k6_getMemorySize((unsigned long _far*) &memSizeBelow16M,
+            (unsigned long _far*) &memSizeAbove16M);
+
+    if (!ret) {
+        return -1;
+    }
+
+    // If the 15M memory area from 1 - 16 MB is actually 14M or less,
+    // we assume a memory hole.
+
+    return (memSizeBelow16M <= (14UL * 1024UL * 1024UL));
+}
+
+void showMemoryInfo(void) {
+
+    // Display Memory Size and 15M-16M-Hole information.
+
+    unsigned long memorySize = 0UL;
+    int memoryHole = 0;
+
+    memorySize = getMemorySize();
+
+    printf("\n");
+
+    if (memorySize == 0) {
+        printf("ERROR OBTAINING SYSTEM MEMORY INFORMATION!!\n\n");
+        return;
+    }
+
+    memorySize = memorySize >> 10UL;
+
+    memoryHole = hasMemoryHole();
+
+    printf("System memory information:\n");
+    printf("        Installed system Memory: %lu KiB\n", memorySize);
+    printf("        Has 15M-16M Memory Hole: ");
+
+    if (memoryHole) {
+        printf("YES\n");
+    } else if (memoryHole == 0) {
+        printf("NO\n");
+    } else {
+        printf("ERROR.\n");
+    }
+
+    printf("\n");
+
+}

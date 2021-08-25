@@ -39,10 +39,14 @@ static void PutError (char *str, ...);
 
 int main (int argc, char **argv)
 {
+
     printf("%s Version %d.%02d\n", k_program_name, k_version_major, k_version_minor);
     printf("%s\n", k_copyright_text);
     printf("%s\n", k_contact_info);
     printf("===============================================================================\n");
+
+    showMemoryInfo();
+
 
     if (!checkAuthenticAMD()) {
         printf("You don't have an AMD CPU. Aborting.\n");

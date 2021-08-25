@@ -39,11 +39,16 @@ extern unsigned short k6_getVBEModeInfo(unsigned short videoMode,
 
 // k6init functionality
 
+unsigned long getMemorySize(void);
 int checkAuthenticAMD(void);
 int checkSupportedCPU(void);
 
 // VESA LFB functionality
 
 int enableWriteCombiningForLFBs(void);
+
+// Memory stuff
+
+void showMemoryInfo(void);
 
 #endif
