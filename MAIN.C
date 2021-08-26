@@ -27,7 +27,7 @@ static int _far HardErrorTrap (void)
 
 static char k_program_name [] = "K6INIT";
 static int k_version_major = 0;
-static int k_version_minor = 1;
+static int k_version_minor = 2;
 static char k_copyright_text [] = "(C) 2021 Eric \"oerg866\" Voirin";
 static char k_contact_info [] = "Contact me on Discord: EricV#9999";
 
