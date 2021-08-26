@@ -53,7 +53,8 @@ int checkSupportedCPU(void)
     return 1;
 }
 
-static int isKnownLFB(unsigned long *lfbList, unsigned long lfbToCheck) {
+static int isKnownLFB(unsigned long *lfbList, unsigned long lfbToCheck)
+{
     int i;
 
     for (i = 0; i < k6_maximumMTRRCount; i++) {
@@ -64,8 +65,8 @@ static int isKnownLFB(unsigned long *lfbList, unsigned long lfbToCheck) {
     return 0;
 }
 
-static int findLFBs(mtrrConfigInfo* mtrrConfig) {
-
+static int findLFBs(mtrrConfigInfo* mtrrConfig)
+{
     vbeInfo *vbeInfoPtr;
     vbeModeInfo *vbeModeInfoPtr;
     unsigned short ret;
@@ -212,7 +213,8 @@ error:
     return -1;
 }
 
-static unsigned long getMTRRRangeForSize(unsigned long size) {
+static unsigned long getMTRRRangeForSize(unsigned long size)
+{
     // 15 bit mask
 
     /*
@@ -243,8 +245,8 @@ static unsigned long getMTRRRangeForSize(unsigned long size) {
     return mask;
 }
 
-static int setupMTRRs(mtrrConfigInfo* mtrrConfig) {
-
+static int setupMTRRs(mtrrConfigInfo* mtrrConfig)
+{
     unsigned short i = 0;
     unsigned long mtrrValue = 0UL;
     unsigned long mtrrMask = 0UL;
@@ -284,8 +286,8 @@ static int setupMTRRs(mtrrConfigInfo* mtrrConfig) {
 
 }
 
-int enableWriteCombiningForLFBs(void) {
-
+int enableWriteCombiningForLFBs(void)
+{
     mtrrConfigInfo mtrrConfig;
     int amountOfLFBs = 0;
     int result = 0;
@@ -307,8 +309,8 @@ int enableWriteCombiningForLFBs(void) {
 }
 
 
-unsigned long getMemorySize(void) {
-
+unsigned long getMemorySize(void)
+{
     // Basically a wrapper function for k6_getMemorySize
     // which is cumbersome to use.
     // The reason for that is that asm PROCs cannot return
@@ -342,8 +344,8 @@ unsigned long getMemorySize(void) {
     return memSizeTotal;
 }
 
-static int hasMemoryHole(void) {
-
+static int hasMemoryHole(void)
+{
     // This function finds out whether or not we have
     // a 15-16M memory hole.
     // -1 = error
@@ -366,8 +368,8 @@ static int hasMemoryHole(void) {
     return (memSizeBelow16M <= (14UL * 1024UL * 1024UL));
 }
 
-void showMemoryInfo(void) {
-
+void showMemoryInfo(void)
+{
     // Display Memory Size and 15M-16M-Hole information.
 
     unsigned long memorySize = 0UL;
