@@ -28,6 +28,8 @@ typedef struct {
 
 extern unsigned short k6_getMemorySize(unsigned long _far *memorySizeBelow16M, unsigned long _far *memorySizeAbove16M);
 
+extern void k6_setWriteAllocate(unsigned long value);
+
 extern void k6_getCPUIdentifier(char _far *cpuidString);
 extern cpuidProcessorType k6_getCPUProcessorType(void);
 
@@ -47,8 +49,14 @@ int checkSupportedCPU(void);
 
 int enableWriteCombiningForLFBs(void);
 
-// Memory stuff
+// Memory / Write Allocate stuff
 
 void showMemoryInfo(void);
+
+void setWriteAllocateManual(unsigned long writeAllocateMemorySize,
+                            int enableForMemoryHole);
+
+void setWriteAllocateForSystemRAM(void);
+
 
 #endif

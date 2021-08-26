@@ -63,6 +63,8 @@ int main (int argc, char **argv)
         goto cleanup;
     }
 
+    setWriteAllocateForSystemRAM();
+
     /*  Parse the command line.  */
 
     signal(SIGINT, SIG_IGN);

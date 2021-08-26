@@ -34,10 +34,14 @@ NO! I'm still learning.
   * yes
 * Set MTRR to enable Write combining for LFB
   * yes
-* Detect total available system memory and set WA mode
-  * No
-* Detect 15-16M Memory hole for WA
-  * No
+* Set Write Combine Mode
+  * no, need to do more research
+* Detect total available system memory 
+  * yes 
+* Detect 15-16M Memory hole 
+  * yes
+* Set write allocate for system memory
+  * yes (not verified yet, it's late)
 * Set K6-3 Multiplier
   * I don't actually own this CPU. ETA: When the cows come home
 

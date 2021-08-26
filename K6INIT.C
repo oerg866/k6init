@@ -403,3 +403,54 @@ void showMemoryInfo(void)
     printf("\n");
 
 }
+
+void setWriteAllocateManual(unsigned long writeAllocateMemorySize,
+                            int enableForMemoryHole)
+{
+    // Sets write allocation for the given parameters
+    // The size is in bytes.
+
+    // 4 MiB mask: 0xFFC00000
+    // Memory hole bit: 0x00010000
+
+    // We need to increment this value by 1 or rather 0x0040000,
+    // else the last 4MB won't be inside the range!
+
+
+    unsigned long writeAllocateReg = (writeAllocateMemorySize + 1)
+                                      & 0xFFC00000UL;
+
+    if (enableForMemoryHole) {
+        writeAllocateReg = writeAllocateReg | 0x00010000UL;
+    }
+
+    printf("Enabling Write Allocate for 1 - %lu MiB\n",
+        writeAllocateReg >> 20UL);
+    printf("Setting Write Allocate WHCR Register: %08lx\n", writeAllocateReg);
+
+    k6_setWriteAllocate(writeAllocateReg);
+
+}
+
+void setWriteAllocateForSystemRAM(void)
+{
+    unsigned long writeAllocateMemorySize;
+    int systemHasMemoryHole;
+
+    writeAllocateMemorySize = getMemorySize();
+    systemHasMemoryHole = hasMemoryHole();
+
+    // Leave if we have an error in detection
+
+    if ((writeAllocateMemorySize == 0) || (systemHasMemoryHole < 0)) {
+        printf("ERROR getting memory info! Not setting Write allocate.\n");
+        return;
+    }
+
+    // Make sure to negate the memory hole var, since it needs to be 1 if
+    // we DON'T have a memory hole to enable write allocate for the 15-16M
+    // region!!
+
+    setWriteAllocateManual(writeAllocateMemorySize, !systemHasMemoryHole);
+
+}

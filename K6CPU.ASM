@@ -7,6 +7,8 @@
 
 k6_getMemorySize        PROTO C memSizeBelow16M:FAR PTR DWORD, memSizeAbove16M:FAR PTR DWORD
 
+k6_setWriteAllocate        PROTO C whcrValue:DWORD
+
 k6_getCPUIdentifier     PROTO C cpuidString:FAR PTR CHAR
 k6_getCPUProcessorType  PROTO C
 
@@ -20,8 +22,8 @@ k6_getVBEModeInfo       PROTO C videoMode:WORD, vbeModeInfoPtr:FAR PTR BYTE
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; getMemorySize
 ;
-; Parameters: pointer to DWORD to put the size below 16M in bytes in 
-;             pointer to DWORD to put the size above 16M in bytes in 
+; Parameters: pointer to DWORD to put the size below 16M in bytes in
+;             pointer to DWORD to put the size above 16M in bytes in
 ; Returns: 1 in ax on success, 0 if not.
 
 k6_getMemorySize PROC C uses ebx ecx edx es di,memSizeBelow16M:FAR PTR DWORD, memSizeAbove16M:FAR PTR DWORD
@@ -74,6 +76,44 @@ done:
 
 k6_getMemorySize ENDP
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; setWriteAllocate
+;
+; Parameters: DWORD containing the register value.
+
+k6_setWriteAllocate PROC C USES eax ebx ecx edx, whcrValue:DWORD
+
+k6_MSR_WHCR        EQU 0C0000082h
+
+    ; MSR register ID needs to go in ecx
+
+    mov ecx, k6_MSR_WHCR ; Write Handling Control Register (WHCR)
+
+    ; 31-00 = eax
+    ; 63-32 = edx
+
+    ; we only write eax since that's what we need.
+
+    mov eax, whcrValue
+    xor edx, edx
+
+    ; since we're messing with caching stuff, we need to
+    ; write back and invalidate the cache first
+
+    pushf
+    cli
+    wbinvd
+
+    ; write the WHCR value
+
+    wrmsr
+    popf
+
+    ret
+
+
+k6_setWriteAllocate ENDP
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; getCPUIdentifier
