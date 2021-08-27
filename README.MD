@@ -12,17 +12,11 @@ In the future it will also let you set the multiplier on K6-3 models.
 
 I'm doing this because I want my K6 machine to be fast.
 
-## Why in C?
-
-Because I hate / suck at x86 assembly and I want flexibility, such as more complex(ish) command line parsing which is hard to do in ASM...
-
-Normally you should really do this in assembly. But YOLO.
-
 # Project Status
 
 ## Does this work yet?
 
-NO! I'm still learning.
+Yes! I mean... I think? Please help by testing!
 
 ## What does it (not) do so-far?
 
@@ -35,13 +29,15 @@ NO! I'm still learning.
 * Set MTRR to enable Write combining for LFB
   * yes
 * Set Write Combine Mode
-  * no, need to do more research
-* Detect total available system memory 
-  * yes 
-* Detect 15-16M Memory hole 
+  * yes
+* Detect total available system memory
+  * yes
+* Detect 15-16M Memory hole
   * yes
 * Set write allocate for system memory
-  * yes (not verified yet, it's late)
+  * yes 
+* Is well-tested
+  * **No** :D
 * Set K6-3 Multiplier
   * I don't actually own this CPU. ETA: When the cows come home
 
@@ -50,8 +46,101 @@ NO! I'm still learning.
 
 * TODO
 
+
+# Running the Driver
+
+Usage (config.sys):
+`DEVICE=K6INIT.C <parameters>`
+
+Usage (command line):
+`K6INIT.EXE <parameters>`
+
+All parameters are **OPTIONAL**. They should only be used by
+knowledgeable users.
+
+By default, the program sets the following CPU features:
+
+- Write Ordering mode to 1 (All except UC/WC)
+- Write Allocate for System memory (auto detected)
+- Write Combining for Linear Frame Buffer(s) exposed by VESA BIOS
+  (auto detected)
+
+This configuration sequence can be changed using the command line parameters.
+
+## Command Line Parameters
+Valid parameters:
+- `/help`
+
+    Prints a (shortened) parameter list.
+
+- `/wc:<address>,<size>`
+
+    Enables Write Combining for a given range.
+
+    - `address` Starting address for Write Combining. 
+                This is a 32-bit hexadecimal value. 
+                (e.g. `e0000000`)
+
+    - `size`    Size of the write combining region in **kilobytes**.
+                This is a decimal value. (e.g. `32768`)
+
+    Example:  `/wc:e0000000,32768`
+
+    **This parameter can be used twice.**
+
+- `/nolfbscan`
+
+    Disables automatic scan for GPU Memory Size and LFB regions.
+    *Tip: Use this with `/wc` to set a manual region (or two)!*
+
+- `/vga`
+
+    Enables Wirte Combining for the VGA memory region (`A0000`-`BFFFF`). 
+    Not done by default because it is *potentially unsafe*.
+
+    **WARNING**: If you enable this, you **MUST NOT** use this memory
+    region for UMBs. Exclude it in your memory manager.
+
+    This parameter is equivalent to `/wc:a0000,128`.
+
+- `/wa:n`
+
+    Disables configuration of Write Allocate.
+
+- `/wa:<size>,<hole>`
+
+    Manual Setup of Write Allocate.
+
+    - `size` Write Allocate region limit (i.e. memory size.) in
+             **kilobytes**.
+             This is a decimal value (e.g. `131072`)
+
+    - `hole` Can be `y` or `n` to indicate presence or absence 
+        of the 15-16M memory hole.
+
+    Example: `/wa:131072:n`.
+
+- `/wo:<mode>`
+
+    Manual Setup of Write Ordering mode.
+
+    - `mode` is a single digit to indicate the mode:
+
+        - `0` for all memory regions (slow)
+        - `1` for all except uncacheable / write combine
+              memory regions (fast, **this is the default**)
+        - `2` for none (fastest)
+        - `n` skip configuration of Write Ordering completely.
+
+    Example: `/wo:2`
+
 # Building
 
+## Why in C?
+
+Because I hate / suck at x86 assembly and I want flexibility, such as more complex(ish) command line parsing which is hard to do in ASM...
+
+Normally you should really do this in assembly. But YOLO.
 ## Requirements
 
 * MS-DOS 6.xx or 7.xx or Windows 9x
@@ -105,12 +194,6 @@ No idea. I don't use the debugger (yet) so at the moment it is not a big deal fo
 ### Why don't you just use 386-MAX as suggested by Microsoft?`
 
 Because when I load it, it reboots my computer. %-)
-
-# Running
-
-`K6INIT.EXE` at a command prompt.
-
-`DEVICE=K6INIT.EXE` in CONFIG.SYS.
 
 # License
 
