@@ -7,7 +7,7 @@
 
 k6_getMemorySize        PROTO C memSizeBelow16M:FAR PTR DWORD, memSizeAbove16M:FAR PTR DWORD
 
-k6_setWriteAllocate        PROTO C whcrValue:DWORD
+k6_setWriteAllocate     PROTO C whcrValue:DWORD
 
 k6_getCPUIdentifier     PROTO C cpuidString:FAR PTR CHAR
 k6_getCPUProcessorType  PROTO C
@@ -26,7 +26,7 @@ k6_getVBEModeInfo       PROTO C videoMode:WORD, vbeModeInfoPtr:FAR PTR BYTE
 ;             pointer to DWORD to put the size above 16M in bytes in
 ; Returns: 1 in ax on success, 0 if not.
 
-k6_getMemorySize PROC C uses ebx ecx edx es di,memSizeBelow16M:FAR PTR DWORD, memSizeAbove16M:FAR PTR DWORD
+k6_getMemorySize PROC C uses ebx ecx edx es di, memSizeBelow16M:FAR PTR DWORD, memSizeAbove16M:FAR PTR DWORD
 
     ; Int15 call
 
@@ -122,7 +122,7 @@ k6_setWriteAllocate ENDP
 ;
 ; Parameters: Pointer to 12 byte memory buffer for the string.
 
-k6_getCPUIdentifier PROC C USES eax ebx ecx edx esi,cpuidString:FAR PTR CHAR
+k6_getCPUIdentifier PROC C USES eax ebx ecx edx esi, cpuidString:FAR PTR CHAR
 
     mov si, word ptr cpuidString
 
@@ -215,7 +215,7 @@ k6_setMTRR ENDP
 ; Parameter: Pointer to a memory location to copy the VBE Info block to.
 ; Returns: Return value of the call
 
-k6_getVBEInfoBlock PROC C USES bx cx dx es di,vbeInfoBlockPtr:FAR PTR BYTE
+k6_getVBEInfoBlock PROC C USES bx cx dx es di, vbeInfoBlockPtr:FAR PTR BYTE
 
     les di, vbeInfoBlockPtr
     mov ax, 4f00h
@@ -236,7 +236,7 @@ k6_getVBEInfoBlock ENDP
 ; Returns: Return value of the call
 
 
-k6_getVBEModeInfo PROC C USES bx cx dx es di,videoMode:WORD,vbeModeInfoPtr:FAR PTR BYTE
+k6_getVBEModeInfo PROC C USES bx cx dx es di, videoMode:WORD, vbeModeInfoPtr:FAR PTR BYTE
 
     les di, vbeModeInfoPtr
     mov ax, 4f01h
