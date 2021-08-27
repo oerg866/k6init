@@ -437,12 +437,16 @@ void setWriteAllocateManual(unsigned long writeAllocateMemorySize,
     unsigned long writeAllocateReg = (writeAllocateMemorySize + 1)
                                       & 0xFFC00000UL;
 
+    printf("Enabling Write Allocate for 1 - %lu MiB, ",
+        writeAllocateReg >> 20UL);
+
     if (enableForMemoryHole) {
         writeAllocateReg = writeAllocateReg | 0x00010000UL;
+        printf("including area between 15-16M.\n");
+    } else {
+        printf("excluding 15-16M memory hole.\n");
     }
 
-    printf("Enabling Write Allocate for 1 - %lu MiB\n",
-        writeAllocateReg >> 20UL);
     printf("Setting Write Allocate WHCR Register: %08lx\n", writeAllocateReg);
 
     k6_setWriteAllocate(writeAllocateReg);
