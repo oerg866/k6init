@@ -65,7 +65,7 @@ static int isKnownLFB(unsigned long *lfbList, unsigned long lfbToCheck)
     return 0;
 }
 
-static int findLFBs(mtrrConfigInfo* mtrrConfig)
+static int findLFBs(mtrrConfigInfo *mtrrConfig)
 {
     vbeInfo *vbeInfoPtr;
     vbeModeInfo *vbeModeInfoPtr;
@@ -130,7 +130,9 @@ static int findLFBs(mtrrConfigInfo* mtrrConfig)
 
     // Copy out OEM version string (Yay far pointers)
 
-    _fstrncpy((char _far*)oemVersionString, vbeInfoPtr->oemStringPtr, 16);
+    _fstrncpy((char _far*)oemVersionString,
+              (char _far*) vbeInfoPtr->oemStringPtr,
+              16);
 
     printf("VESA BIOS OEM Version String: %s\n", oemVersionString);
 
@@ -345,10 +347,10 @@ unsigned long getMemorySize(void)
 }
 
 static int hasMemoryHole(void)
+// This function finds out whether or not we have
+// a 15-16M memory hole.
+// -1 = error
 {
-    // This function finds out whether or not we have
-    // a 15-16M memory hole.
-    // -1 = error
 
     unsigned long memSizeBelow16M = 0UL;
     unsigned long memSizeAbove16M = 0UL;
@@ -369,9 +371,8 @@ static int hasMemoryHole(void)
 }
 
 void showMemoryInfo(void)
+// Displays Memory Size and 15M-16M-Hole information.
 {
-    // Display Memory Size and 15M-16M-Hole information.
-
     unsigned long memorySize = 0UL;
     int memoryHole = 0;
 
@@ -401,15 +402,13 @@ void showMemoryInfo(void)
     }
 
     printf("\n");
-
 }
 
 void setWriteAllocateManual(unsigned long writeAllocateMemorySize,
                             int enableForMemoryHole)
+// Sets write allocation for the given parameters
+// The size is in bytes.
 {
-    // Sets write allocation for the given parameters
-    // The size is in bytes.
-
     // 4 MiB mask: 0xFFC00000
     // Memory hole bit: 0x00010000
 
