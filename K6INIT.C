@@ -79,30 +79,36 @@ static int findLFBs(mtrrConfigInfo *mtrrConfig)
 
     int foundLFB = 0;
 
-    if (mtrrConfig == NULL) {
-        printf("mtrrConfig is NULL! Aborting...\n");
-        goto error;
-    }
-
-    printf("Attempting to find Linear Frame Buffer (LFB) region(s)...\n");
-    printf("Probing VGA BIOS for VBE support...\n\n");
-
     // Allocate memory for VBE (Mode) Info structures
 
     vbeInfoPtr = malloc(sizeof(vbeInfo));
     vbeModeInfoPtr = malloc(sizeof(vbeModeInfo));
+
+    // Do some sanity checks first.
 
     if ((vbeInfoPtr == NULL) || (vbeModeInfoPtr == NULL)) {
         printf("ERROR> could not allocate memory for VBE Info Structures.\n");
         goto error;
     }
 
+    if (mtrrConfig == NULL) {
+        printf("mtrrConfig is NULL! Aborting...\n");
+        goto error;
+    }
+
+    if (mtrrConfig->mtrrCount == k6_maximumMTRRCount) {
+        printf("No more Write Combine / MTRR slots available!");
+        goto error;
+    }
+
+    printf("Attempting to find Linear Frame Buffer (LFB) region(s)...\n");
+    printf("Probing VGA BIOS for VBE support...\n\n");
+
     // Init the memory
 
     memset(vbeInfoPtr, 0, sizeof(vbeInfo));
     memset(vbeModeInfoPtr, 0, sizeof(vbeModeInfo));
     memset(oemVersionString, 0, sizeof(oemVersionString));
-    memset(mtrrConfig, 0, sizeof(mtrrConfigInfo));
 
     // A VBE Info Block request must happen with the target block's
     // Signature field set to "VBE2"
@@ -186,21 +192,19 @@ static int findLFBs(mtrrConfigInfo *mtrrConfig)
                     foundLFB,
                     vbeModeInfoPtr->framebuffer);
 
-                mtrrConfig->mtrrs[foundLFB] = vbeModeInfoPtr->framebuffer;
-                mtrrConfig->mtrrSizes[foundLFB] = videoMemorySize;
+                mtrrConfigInfoAppend(mtrrConfig, vbeModeInfoPtr->framebuffer,
+                    videoMemorySize);
+
                 foundLFB++;
             }
 
             // If we exceed two LFBs, we stop processing the VESA modes.
 
-            if (foundLFB == k6_maximumMTRRCount) {
+            if (mtrrConfig->mtrrCount == k6_maximumMTRRCount) {
                 break;
             }
         }
     }
-
-
-    mtrrConfig->mtrrCount = foundLFB;
 
     free(vbeModeInfoPtr);
     free(vbeInfoPtr);
