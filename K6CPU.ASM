@@ -12,6 +12,7 @@ k6_setWriteAllocate     PROTO C whcrValue:DWORD
 k6_getCPUIdentifier     PROTO C cpuidString:FAR PTR CHAR
 k6_getCPUProcessorType  PROTO C
 
+k6_setWriteOrderMode    PROTO C writeOrderMode:WORD
 k6_setMTRR              PROTO C mtrrIndex:WORD, mtrrValue:DWORD
 
 k6_getVBEInfoBlock      PROTO C vbeInfoBlockPtr:FAR PTR BYTE
@@ -76,45 +77,6 @@ done:
 
 k6_getMemorySize ENDP
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; setWriteAllocate
-;
-; Parameters: DWORD containing the register value.
-
-k6_setWriteAllocate PROC C USES eax ebx ecx edx, whcrValue:DWORD
-
-k6_MSR_WHCR        EQU 0C0000082h
-
-    ; MSR register ID needs to go in ecx
-
-    mov ecx, k6_MSR_WHCR ; Write Handling Control Register (WHCR)
-
-    ; 31-00 = eax
-    ; 63-32 = edx
-
-    ; we only write eax since that's what we need.
-
-    mov eax, whcrValue
-    xor edx, edx
-
-    ; since we're messing with caching stuff, we need to
-    ; write back and invalidate the cache first
-
-    pushf
-    cli
-    wbinvd
-
-    ; write the WHCR value
-
-    wrmsr
-    popf
-
-    ret
-
-
-k6_setWriteAllocate ENDP
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; getCPUIdentifier
 ;
@@ -161,6 +123,90 @@ k6_getCPUProcessorType PROC C uses ebx ecx edx
     ret
 
 k6_getCPUProcessorType ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; setWriteOrderMode
+;
+; Sets the write Ordering mode using the CPU's EFER register.
+;
+; Parameters: WORD containing the mode (this is what ends up)
+;                  in the rprocessor EFER[3] and EFER[2] bits.
+
+k6_setWriteCombineMode PROC C uses eax ebx ecx, writeCombineMode:WORD
+
+k6_MSR_EFER         EQU 0C0000080h
+
+    ; First, read back the EFER to manipulate it
+
+    mov ecx, k6_MSR_EFER
+
+    ; Write back and invalidate cache
+
+    pushf
+    cli
+    wbinvd
+
+    rdmsr
+
+    ; Mask the EWBEC bits (2 and 3), also important that we don't
+    ; fault the CPU by writing reserved bits
+
+    and eax, 0F3h
+
+    ; prepare the EWBEC bits with the word supplied in writeOrderMode
+
+    xor ebx, ebx
+    mov bx, writeCombineMode
+    shl bx, 2
+    and bx, 0Ch
+
+    or eax, ebx
+
+    ; Write the new EFER to MSR
+
+    mov ecx, k6_MSR_EFER
+    wrmsr
+    popf
+
+    ret
+
+k6_setWriteCombineMode ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; setWriteAllocate
+;
+; Parameters: DWORD containing the register value.
+
+k6_setWriteAllocate PROC C USES eax ebx ecx edx, whcrValue:DWORD
+
+k6_MSR_WHCR        EQU 0C0000082h
+
+    ; MSR register ID needs to go in ecx
+
+    mov ecx, k6_MSR_WHCR ; Write Handling Control Register (WHCR)
+
+    ; 31-00 = eax
+    ; 63-32 = edx
+
+    ; we only write eax since that's what we need.
+
+    mov eax, whcrValue
+    xor edx, edx
+
+    ; since we're messing with caching stuff, we need to
+    ; write back and invalidate the cache first
+
+    pushf
+    cli
+    wbinvd
+
+    ; write the WHCR value
+
+    wrmsr
+    popf
+
+    ret
+k6_setWriteAllocate ENDP
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; setMTRR
