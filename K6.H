@@ -44,10 +44,7 @@ extern unsigned short k6_getVBEModeInfo(unsigned short videoMode,
 unsigned long getMemorySize(void);
 int checkAuthenticAMD(void);
 int checkSupportedCPU(void);
-
-// VESA LFB functionality
-
-int enableWriteCombiningForLFBs(void);
+int configureWriteCombining(mtrrConfigInfo *mtrrsToConfigure, int doLfbScan);
 void mtrrConfigInfoAppend(mtrrConfigInfo *dst,
                           unsigned long address,
                           unsigned long size);

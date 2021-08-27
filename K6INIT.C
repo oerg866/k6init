@@ -316,28 +316,42 @@ void mtrrConfigInfoAppend(mtrrConfigInfo *dst,
     dst->mtrrCount++;
 }
 
-int enableWriteCombiningForLFBs(void)
+int configureWriteCombining(mtrrConfigInfo *mtrrsToConfigure,
+                            int doLfbScan)
+// Configures Write Combining with the given parameters in mtrrsToConfigure.
+// if doLfbScan = 1 then the VESA BIOS will be probed for the LFB region.
+// this is the default behavior.
+// returns -1 or 0 on error.
 {
-    mtrrConfigInfo mtrrConfig;
-    int amountOfLFBs = 0;
-    int result = 0;
+    int vbeLFBCount = 0;
 
-    // Probe VESA BIOS first to find LFBs and VRAM size
+    if (mtrrsToConfigure == NULL) {
+        printf("mtrrsToConfigure NULL pointer!!\n");
+        return 0;
+    }
 
-    amountOfLFBs = findLFBs(&mtrrConfig);
+    // If doLfbScan is set, we scan for LFBs via VBE
 
-    // Set up the processor MTRR registers for these LFBs.
-    // TODO: If only 1 LFB is found, consider making an MTRR
-    // config for legacy VGA memory region
+    if (doLfbScan) {
+        vbeLFBCount = findLFBs(mtrrsToConfigure);
 
-    // TODO: Allow custom regions.
+        if (vbeLFBCount >= 0) {
+            printf("LFB MTRRs configured via VESA BIOS: %u\n", vbeLFBCount);
+        } else {
+            // Error condition
+            printf("ERROR probing VESA BIOS! Cannot auto-detect LFB!\n");
+        }
+    }
 
-    result = setupMTRRs(&mtrrConfig);
+    // Newline for readability's sake...
 
-    return result;
+    printf("\n");
+
+    // Now we setup the MTRRs in the CPU.
+
+    return setupMTRRs(mtrrsToConfigure);
 
 }
-
 
 unsigned long getMemorySize(void)
 {
