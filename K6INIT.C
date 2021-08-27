@@ -261,7 +261,7 @@ static int setupMTRRs(mtrrConfigInfo *mtrrConfig)
 
     if (mtrrConfig == NULL) {
         printf("mtrrConfig is NULL! Aborting...\n");
-        return -1;
+        return 0;
     }
 
     for (i = 0; i < mtrrConfig->mtrrCount; i++) {
