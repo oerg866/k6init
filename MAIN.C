@@ -10,11 +10,13 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <keepc.h>
 #include <standard.h>
 
 #include "k6.h"
+#include "k6cmdl.h"
 
 /*  Hard error trap... I have no idea why this is here, but the
     driver hybrid ASM+C example from DOS internals had this in it,
@@ -39,6 +41,30 @@ static void PutError (char *str, ...);
 
 int main (int argc, char **argv)
 {
+    mtrrConfigInfo mtrrSetup;       // The MTRR regions to rwrite. By
+                                    // default, we don't write anything.
+
+    int writeOrderSetup = 1 ;       // Write order setup,
+                                    // For value see k6init.h, except:
+                                    // -1 = don't config
+
+    int writeAllocateSetup = 0;     // Indicates user wants manual
+                                    // Write Allocate setup
+                                    // 1  = manual
+                                    // 0  = autodetect
+                                    // -1 = don't config
+
+    int doLfbScan = 1;              // By default, we scan for LFB in VBE.
+
+    int i;
+    int ret = 1;
+
+    unsigned long parsedMtrrAddr = 0UL;
+    unsigned long parsedMtrrSize = 0UL;
+    unsigned long parsedWASize = 0UL;
+    int parsedWAMemoryHole = 0;
+
+    memset(&mtrrSetup, 0, sizeof(mtrrConfigInfo));
 
     printf("%s Version %d.%02d\n", k_program_name, k_version_major, k_version_minor);
     printf("%s\n", k_copyright_text);
@@ -46,7 +72,6 @@ int main (int argc, char **argv)
     printf("===============================================================================\n");
 
     showMemoryInfo();
-
 
     if (!checkAuthenticAMD()) {
         printf("You don't have an AMD CPU. Aborting.\n");
@@ -58,14 +83,103 @@ int main (int argc, char **argv)
         goto cleanup;
     }
 
-    if (!enableWriteCombiningForLFBs()) {
-        printf("Failed to enable Write Combining.\n");
+    printf("\n");
+
+    for (i = 1; i < argc; i++) {
+        // Parse an argument.
+        // Let's make it lowercase first so we support both cases.
+
+        toLowercase(argv[i]);
+
+        if        (stringStartsWith(argv[i], "/wc:")) {
+
+            // Write Combine Parameter
+            ret = getMtrrValues(argv[i], &parsedMtrrAddr, &parsedMtrrSize);
+
+            if (ret) {
+                mtrrConfigInfoAppend(&mtrrSetup, parsedMtrrAddr,
+                                     parsedMtrrSize);
+            }
+
+        } else if (stringStartsWith(argv[i], "/nolfbscan")) {
+
+            // Disable LFB Scan
+            doLfbScan = 0;
+
+        } else if (stringStartsWith(argv[i], "/vga")) {
+
+            // Add Write Combining for VGA region.
+            printf("Setting up Write Combine for VGA region.\n");
+            mtrrConfigInfoAppend(&mtrrSetup, 0x000A0000UL, 131072UL);
+
+        } else if (stringStartsWith(argv[i], "/wa:")) {
+
+            // Set Write Allocate (disables automatic system scan)
+            ret = getWriteAllocateValues(argv[i], &writeAllocateSetup,
+                                         &parsedWASize, &parsedWAMemoryHole);
+
+        } else if (stringStartsWith(argv[i], "/wo:")) {
+
+            // Set Write Ordering Mode
+            ret = getWriteOrderValues(argv[i], &writeOrderSetup);
+
+        } else if (stringStartsWith(argv[i], "/help")) {
+
+            // Print usage info. We exit after this.
+            printUsageInfo();
+            goto cleanup;
+
+        } else {
+
+            // Unknown parameter
+            printf("Unknown command line parameter: %s\n", argv[i]);
+            printf("Aborting.\n");
+            goto cleanup;
+        }
+
+        if (!ret) {
+            printf("Command line parsing error! Aborting.\n");
+            goto cleanup;
+        }
+
+    }
+
+    printf("\n");
+
+    if (!doLfbScan) {
+        printf("Disabling automatic VBE LFB scan.\n");
+    }
+
+    // Setup Write Allocate
+
+    if (writeAllocateSetup == 1) {
+        // Manual Setup, need to invert the presence of the memory hole
+        // to ENABLE WA for that region.
+        setWriteAllocateManual(parsedWASize, !parsedWAMemoryHole);
+    } else if (writeAllocateSetup == 0) {
+        // Autodetect memory and set WA
+        setWriteAllocateForSystemRAM();
+    } else {
+        printf("Skipping setup of Write Allocate.\n");
+    }
+
+    // Setup Write Combining
+
+    if (!configureWriteCombining(&mtrrSetup, doLfbScan)) {
+        printf("Error configuring Write Combining. Aborting.\n");
         goto cleanup;
     }
 
-    setWriteAllocateForSystemRAM();
+    // Setup Write Ordering
 
-    /*  Parse the command line.  */
+    if (writeOrderSetup >= 0) {
+        setWriteOrderMode(writeOrderSetup);
+    } else {
+        printf("Skipping setup of Write Ordering.\n");
+    }
+
+    goto cleanup;
+
 
     signal(SIGINT, SIG_IGN);
     _harderr(HardErrorTrap);
