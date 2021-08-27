@@ -291,6 +291,11 @@ static int setupMTRRs(mtrrConfigInfo *mtrrConfig)
         k6_setMTRR(i, mtrrValue);
     }
 
+    // Newline for readability
+
+    printf("\n");
+
+    return 1;
 }
 
 void mtrrConfigInfoAppend(mtrrConfigInfo *dst,
