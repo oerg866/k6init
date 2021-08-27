@@ -251,7 +251,7 @@ static unsigned long getMTRRRangeForSize(unsigned long size)
     return mask;
 }
 
-static int setupMTRRs(mtrrConfigInfo* mtrrConfig)
+static int setupMTRRs(mtrrConfigInfo *mtrrConfig)
 {
     unsigned short i = 0;
     unsigned long mtrrValue = 0UL;
@@ -281,7 +281,8 @@ static int setupMTRRs(mtrrConfigInfo* mtrrConfig)
         mtrrMask <<= 2UL;
         mtrrValue |= mtrrMask;
 
-        printf("Configuring MTRR0: %08lx, size %lu -> %08lx \n",
+        printf("Configuring MTRR%u: %08lx, size %lu -> %08lx \n",
+            i,
             mtrrConfig->mtrrs[i],
             mtrrConfig->mtrrSizes[i],
             mtrrValue);
@@ -347,11 +348,6 @@ unsigned long getMemorySize(void)
 
     ret = k6_getMemorySize((unsigned long _far*) &memSizeBelow16M,
             (unsigned long _far*) &memSizeAbove16M);
-
-    printf("ret %u, below 16m: %lu above 16m: %lu\n\n",
-        ret,
-        memSizeBelow16M,
-        memSizeAbove16M);
 
     if (!ret) {
         return 0;
