@@ -14,6 +14,12 @@
 
 #define k6_maximumMTRRCount  2
 
+static char k6_writeOrderModeStrings[][256] = {
+    "All (Slow)",                                       // 0
+    "All except Uncacheable/Write-Combined (Fast)",     // 1
+    "None (Fastest)"                                    // 2
+};
+
 typedef struct {
     unsigned long stepping : 4, model : 4, family : 4, type : 2;
 } cpuidProcessorType;
@@ -57,6 +63,8 @@ void setWriteAllocateManual(unsigned long writeAllocateMemorySize,
                             int enableForMemoryHole);
 
 void setWriteAllocateForSystemRAM(void);
+
+void setWriteOrderMode(int writeOrderMode);
 
 
 #endif

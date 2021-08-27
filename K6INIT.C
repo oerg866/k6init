@@ -493,5 +493,17 @@ void setWriteAllocateForSystemRAM(void)
     // region!!
 
     setWriteAllocateManual(writeAllocateMemorySize, !systemHasMemoryHole);
+}
 
+void setWriteOrderMode(int writeOrderMode)
+// Sets the write order mode.
+// See k6init.h for parameter values.
+{
+    if ((writeOrderMode < 0) || (writeOrderMode > 2)) {
+        printf("Invalid Write Order Mode value.\n");
+        return;
+    }
+    printf("Setting Write Order mode to '%s' (%d)",
+        k6_writeOrderModeStrings[writeOrderMode],
+        writeOrderMode);
 }
