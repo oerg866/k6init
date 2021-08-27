@@ -453,6 +453,8 @@ void setWriteAllocateManual(unsigned long writeAllocateMemorySize,
 }
 
 void setWriteAllocateForSystemRAM(void)
+// Attempts to auto-detect the available sytem memory and sets up Write
+// Allocate for it. This function is called by default
 {
     unsigned long writeAllocateMemorySize;
     int systemHasMemoryHole;
