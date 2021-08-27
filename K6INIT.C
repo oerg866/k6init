@@ -430,11 +430,10 @@ void setWriteAllocateManual(unsigned long writeAllocateMemorySize,
     // 4 MiB mask: 0xFFC00000
     // Memory hole bit: 0x00010000
 
-    // We need to increment this value by 1 or rather 0x0040000,
+    // We need to increment this value by 1 or rather 0x00400000,
     // else the last 4MB won't be inside the range!
 
-
-    unsigned long writeAllocateReg = (writeAllocateMemorySize + 1)
+    unsigned long writeAllocateReg = (writeAllocateMemorySize + 0x00400000UL)
                                       & 0xFFC00000UL;
 
     printf("Enabling Write Allocate for 1 - %lu MiB, ",
