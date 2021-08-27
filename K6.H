@@ -48,6 +48,9 @@ int checkSupportedCPU(void);
 // VESA LFB functionality
 
 int enableWriteCombiningForLFBs(void);
+void mtrrConfigInfoAppend(mtrrConfigInfo *dst,
+                          unsigned long address,
+                          unsigned long size);
 
 // Memory / Write Allocate stuff
 

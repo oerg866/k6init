@@ -288,6 +288,24 @@ static int setupMTRRs(mtrrConfigInfo* mtrrConfig)
 
 }
 
+void mtrrConfigInfoAppend(mtrrConfigInfo *dst,
+                          unsigned long address,
+                          unsigned long size)
+// Adds a MTRR Write combine range to the mtrrConfigInfo struct.
+{
+    if (dst == NULL)
+        return;
+
+    if (dst->mtrrCount == k6_maximumMTRRCount) {
+        printf("Attempting to add MTRR range but maximum MTRR count already reached!\n");
+        return;
+    }
+
+    dst->mtrrs[dst->mtrrCount] = address;
+    dst->mtrrSizes[dst->mtrrCount] = size;
+    dst->mtrrCount++;
+}
+
 int enableWriteCombiningForLFBs(void)
 {
     mtrrConfigInfo mtrrConfig;
