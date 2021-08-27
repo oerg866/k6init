@@ -25,11 +25,11 @@ static int _far HardErrorTrap (void)
     return (_HARDERR_FAIL);
 }
 
-static char k_program_name [] = "K6INIT";
-static int k_version_major = 0;
-static int k_version_minor = 2;
-static char k_copyright_text [] = "(C) 2021 Eric \"oerg866\" Voirin";
-static char k_contact_info [] = "Contact me on Discord: EricV#9999";
+static const char k_program_name [] = "K6INIT";
+static const int k_version_major = 0;
+static const int k_version_minor = 2;
+static const char k_copyright_text [] = "(C) 2021 Eric \"oerg866\" Voirin";
+static const char k_contact_info [] = "Contact me on Discord: EricV#9999";
 
 /*  Message output  */
 
