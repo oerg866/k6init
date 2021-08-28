@@ -198,7 +198,7 @@ int getWriteOrderValues(char *str, int *setupMode)
 int getWriteAllocateValues(char *str, int *setupMode,
                            unsigned long *waMemorySize, int *waHasMemoryHole)
 // Populates address and size variables from a string of format:
-// /wa:lx,h
+// /wa:lu,h
 // where    lu = size in KILOBYTES!!, unsigned long integer
 //          h  = char which indicates presence of 15-16M hole,
 //               either 'y' or 'n'
