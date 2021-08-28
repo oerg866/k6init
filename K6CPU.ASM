@@ -170,7 +170,7 @@ k6_MSR_EFER         EQU 0C0000080h
 
     ret
 
-k6_setwriteOrderMode ENDP
+k6_setWriteOrderMode ENDP
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; setWriteAllocate
