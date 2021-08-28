@@ -41,7 +41,7 @@ static void PutError (char *str, ...);
 
 int main (int argc, char **argv)
 {
-    mtrrConfigInfo mtrrSetup;       // The MTRR regions to rwrite. By
+    mtrrConfigInfo mtrrSetup;       // The MTRR regions to write. By
                                     // default, we don't write anything.
 
     int writeOrderSetup = 1 ;       // Write order setup,
