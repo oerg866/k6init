@@ -44,8 +44,11 @@ Yes! I mean... I think? Please help by testing!
 
 ## Supported Processors
 
-* TODO
-
+| CPU Type                | Family | Model | Stepping |
+|-------------------------|--------|-------|----------|
+| AMD K6-2 (CXT Core)     | 5      | 8     | C        |
+| AMD K6-III              | 5      | 9     | *Any*    |
+| AMD K6-2+ / AMD K6-III+ | 5      | D     | *Any*    |
 
 # Running the Driver
 
