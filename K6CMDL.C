@@ -176,11 +176,7 @@ int getWriteOrderValues(char *str, int *setupMode)
 
     // advance param pointer to after the initial token
 
-    printf("param %p\n", param);
-
     param += strlen("/wo:");
-
-    printf("param %p\n", param);
 
     // There should only one character afterwards
 
