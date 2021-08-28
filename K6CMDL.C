@@ -134,13 +134,9 @@ int getMtrrValues(char *str, unsigned long *address, unsigned long *size)
 
     param = paramEnd + 1;
 
-    // get second param, unsigned long base 10
+    // get second param, unsigned long base 10, convert from KiB to B
 
-    *size = strtoul(param, &paramEnd, 10);
-
-    // convert KiB to B
-
-    *size = *size << 10;
+    *size = strtoul(param, &paramEnd, 10) << 10;
 
     // If there was an error during the last conversion or
     // there's garbage at the end of the line, we still return an error.
@@ -234,13 +230,9 @@ int getWriteAllocateValues(char *str, int *setupMode,
         return 1;
     }
 
-    // get first param, unsigned long base 16
+    // get first param, unsigned long base 16, convert KiB to B
 
-    *waMemorySize = strtoul(param, &paramEnd, 10);
-
-    // convert KiB to B
-
-    *waMemorySize = *waMemorySize << 10;
+    *waMemorySize = strtoul(param, &paramEnd, 10) << 10;
 
     // now there should be a comma and one more character after that.
 

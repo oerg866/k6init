@@ -422,7 +422,7 @@ void showMemoryInfo(void)
         return;
     }
 
-    memorySize = memorySize >> 10UL;
+    memorySize >>= 10UL;
 
     memoryHole = hasMemoryHole();
 
@@ -459,7 +459,7 @@ void setWriteAllocateManual(unsigned long writeAllocateMemorySize,
         writeAllocateReg >> 20UL);
 
     if (enableForMemoryHole) {
-        writeAllocateReg = writeAllocateReg | 0x00010000UL;
+        writeAllocateReg |= 0x00010000UL;
         printf("including area between 15-16M.\n");
     } else {
         printf("excluding 15-16M memory hole.\n");
