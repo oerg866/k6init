@@ -19,10 +19,22 @@
 
 #define k6_maximumMTRRCount             2   // Amount of MTRR registers.
 
+#define BADMUL 0xFFFF // Value indicating an invalid multiplier value
+
 static const char k6_writeOrderModeStrings[][256] = {
     "All (Slow)",                                       // 0
     "All except Uncacheable/Write-Combined (Fast)",     // 1
     "None (Fastest)"                                    // 2
+};
+
+static const unsigned short k6_multiplierValues[] = {
+    BADMUL, BADMUL, // 0.0x, 0.5x (both invalid)
+    BADMUL, BADMUL, // 1.0x, 1.5x (both invalid)
+    0x0004, BADMUL, // 2.0x, 2.5x (2.5x = invalid)
+    0x0005, 0x0007, // 3.0x, 3.5x
+    0x0002, 0x0000, // 4.0x, 4.5x
+    0x0001, 0x0003, // 5.0x, 5.5x
+    0x0006          // 6.0x
 };
 
 typedef struct {
@@ -43,6 +55,9 @@ extern void k6_setWriteAllocate(unsigned long value);
 
 extern void k6_getCPUIdentifier(char _far *cpuidString);
 extern cpuidProcessorType k6_getCPUProcessorType(void);
+
+extern void k6_toggleEPMIOBlock(unsigned short epmIoEnable);
+extern void k6_setMultiplier(unsigned short multiValue);
 
 extern void k6_setWriteOrderMode(unsigned short writeOrderMode);
 extern void k6_setMTRR(unsigned short index, unsigned long value);
@@ -73,5 +88,6 @@ void setWriteAllocateForSystemRAM(void);
 
 void setWriteOrderMode(int writeOrderMode);
 
+void setMultiplier(unsigned short multiplierValueIndex);
 
 #endif

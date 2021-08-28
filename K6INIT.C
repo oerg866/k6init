@@ -519,3 +519,30 @@ void setWriteOrderMode(int writeOrderMode)
 
     k6_setWriteOrderMode(writeOrderMode);
 }
+
+void setMultiplier(unsigned short multiplierValueIndex)
+// Sets the multiplier value by manipulating the Enhanced Power Management
+// (EPM) I/O block. This only works on AMD K6-2+/K6-III+ CPUs.
+{
+    unsigned short multiplierValue = BADMUL;
+
+    if (multiplierValueIndex >= (sizeof(k6_multiplierValues) / sizeof(unsigned short))) {
+        printf("Invalid multiplier value.\n");
+        return;
+    }
+
+    multiplierValue = k6_multiplierValues[multiplierValueIndex];
+
+    if (multiplierValue == BADMUL) {
+        printf("Invalid multiplier value.\n");
+        return;
+    }
+
+    // Write the value to the CPU
+
+    printf("Writing multiplier value %04hx to CPU.\n\n", multiplierValue);
+
+    k6_toggleEPMIOBlock(1);
+    k6_setMultiplier(multiplierValue);
+    k6_toggleEPMIOBlock(0);
+}

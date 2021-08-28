@@ -12,11 +12,19 @@ k6_setWriteAllocate     PROTO C whcrValue:DWORD
 k6_getCPUIdentifier     PROTO C cpuidString:FAR PTR CHAR
 k6_getCPUProcessorType  PROTO C
 
+k6_toggleEPMIOBlock     PROTO C epmIoEnable:WORD
+k6_setMultiplier        PROTO C multiValue:WORD
+
 k6_setWriteOrderMode    PROTO C writeOrderMode:WORD
 k6_setMTRR              PROTO C mtrrIndex:WORD, mtrrValue:DWORD
 
 k6_getVBEInfoBlock      PROTO C vbeInfoBlockPtr:FAR PTR BYTE
 k6_getVBEModeInfo       PROTO C videoMode:WORD, vbeModeInfoPtr:FAR PTR BYTE
+
+k6_MSR_EFER             EQU 0C0000080h  ; Extended Feature Enable Register (EFER)
+k6_MSR_WHCR             EQU 0C0000082h  ; Write Handling Control Register (WHCR)
+k6_MSR_UWCCR            EQU 0C0000085h  ; UC/WC Cachability Control Register (UWCCR)
+k6_MSR_EPMR             EQU 0C0000086h  ; Enhanced Power Management Register (EPMR)
 
     .CODE
 
@@ -125,6 +133,87 @@ k6_getCPUProcessorType PROC C uses ebx ecx edx
 k6_getCPUProcessorType ENDP
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; toggleEPMIOBlock
+;
+; Enables or disables the Enhanced Power Management (EPM) I/O block.
+;
+; Parameters: WORD indicating whether the block should be enabled or not.
+
+k6_toggleEPMIOBlock PROC C uses eax ebx ecx edx, epmIoEnable:WORD
+
+    ; Set up write to EPMR
+
+    mov ecx, k6_MSR_EPMR
+    mov edx, 0
+
+    ; Set it up for I/O base FFF0
+
+    mov eax, 0FFF0h
+
+    ; Check the parameter
+
+    cmp epmIoEnable, 0
+    jz @f
+
+    ; If we want to enable the block, set the appropriate bit
+
+    or eax, 00001h
+
+@@:
+    wrmsr
+    ret
+
+k6_toggleEPMIOBlock ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; setMultiplier
+;
+; Sets the Multiplier Field in the DWORD at offset 8 of the
+; EPM I/O block.
+;
+; Parameters: WORD containing the 3-bit value for the IBF field.
+; 100b 2.0x     000b 4.5x
+; 101b 3.0x     001b 5.0x
+; 110b 6.0x     010b 4.0x
+; 111b 3.5x     011b 5.5x
+
+k6_setMultiplier PROC C uses eax dx, multiplierValue:WORD
+
+    ; Requires EPMR I/O block to be active. (call toggleEPMIOBlock first)
+
+    ; Prepare multiplier value
+
+    mov ax, multiplierValue
+
+    ; filter relevant bits to make sure and shift left by 5 so they
+    ; fill the "Internal Bus Divisor" field
+
+    and eax, 00007h
+    shl eax, 5
+
+    ; Set counter to force CPU into EPM stop grant state,
+    ; so that the values get applied
+
+    ; Refer to AMD-K6-2E+ Embedded Processor Data Sheet
+    ; 23542A/0—September 2000 Page 147
+
+    or eax, 01000h
+
+    ; Set bus divisor control to 10b to set that the
+    ; IBF field is sampled upon entering the EPM Stop Grant state
+
+    or eax, 00200h
+
+    ; Output the value to Bus Divisor and Voltage ID Control (BVC)
+    ; (IOBASE + 08h)
+
+    mov dx, 0FFF8h
+    out dx, eax
+
+    ret
+k6_setMultiplier ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; setWriteOrderMode
 ;
 ; Sets the write Ordering mode using the CPU's EFER register.
@@ -133,8 +222,6 @@ k6_getCPUProcessorType ENDP
 ;                  in the rprocessor EFER[3] and EFER[2] bits.
 
 k6_setWriteOrderMode PROC C uses eax ebx ecx, writeOrderMode:WORD
-
-k6_MSR_EFER         EQU 0C0000080h
 
     ; First, read back the EFER to manipulate it
 
@@ -179,8 +266,6 @@ k6_setWriteOrderMode ENDP
 
 k6_setWriteAllocate PROC C USES eax ebx ecx edx, whcrValue:DWORD
 
-k6_MSR_WHCR        EQU 0C0000082h
-
     ; MSR register ID needs to go in ecx
 
     mov ecx, k6_MSR_WHCR ; Write Handling Control Register (WHCR)
@@ -218,8 +303,6 @@ k6_setWriteAllocate ENDP
 ;             MTRR value
 
 k6_setMTRR PROC C USES eax ebx ecx edx, mtrrIndex:WORD, mtrrValue:DWORD
-
-k6_MSR_UWCCR    EQU 0C0000085h
 
     ; MSR register ID needs to go in ecx
 

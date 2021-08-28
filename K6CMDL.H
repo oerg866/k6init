@@ -5,7 +5,7 @@ static const char k6cmdl_usage_info[] = {
     "Usage (config.sys):   DEVICE=K6INIT.EXE <parameters>\n"
     "Usage (command line): K6INIT.EXE <parameters>\n"
     "\n"
-    "All parameters are OPTIONAL. Use them at own risk! Valid Parameters are:\n"
+    "Parameters are OPTIONAL. Use them at your own risk! Available options:\n"
     "  /help                                                               \n"
     "       Prints this list :-)                                           \n"
     "  /wc:<address>,<size>                                                \n"
@@ -22,7 +22,8 @@ static const char k6cmdl_usage_info[] = {
     "       Manual Setup of Write Allocate.                                \n"
     "  /wo:<mode>                                                          \n"
     "       Manual Setup of Write Ordering mode.                           \n"
-    "\n"
+    "  /multi:<x>.<y>                                                      \n"
+    "       Sets the CPU multiplier (K6-2+/III+ ONLY!)                     \n"
     "  Refer to READNE.MD for more details.\n"
 };
 
@@ -33,5 +34,6 @@ int getMtrrValues(char *str, unsigned long *address, unsigned long *size);
 int getWriteAllocateValues(char *str, int *setupMode,
                            unsigned long *waMemorySize, int *waHasMemoryHole);
 int getWriteOrderValues(char *str, int *setupMode);
+int getMultiplierValues(char *str, int *setupMode, unsigned short *multiplierValueIndex);
 
 #endif

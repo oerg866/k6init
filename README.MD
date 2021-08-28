@@ -138,6 +138,22 @@ Valid parameters:
 
     Example: `/wo:2`
 
+- `/multi:<x>,<y>`
+
+    Set the CPU bus frequency multiplier.
+
+    - `x` integral part of the multiplier value, a digit from `2` to `6`
+
+    - `y` fractional part of the multiplier value, either `0` or `5`
+
+    Example: `/multi:5.5`
+
+    **IMPRORTANT: This feature can only be used on K6-2+ and K6-III+ CPUs!**
+
+    **WARNING: This feature is UNTESTED because I do not own a "+" CPU!
+    Testers wanted!**
+
+
 # Building
 
 ## Why in C?

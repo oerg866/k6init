@@ -260,3 +260,54 @@ int getWriteAllocateValues(char *str, int *setupMode,
     *setupMode = 1;
     return 1;
 }
+
+int getMultiplierValues(char *str, int *setupMode, unsigned short *multiplierValueIndex)
+// Populates multiplier value index based on an input string of the format
+// /multi:x.y
+// where    x = multiplier integral digit, between '2' and '6'
+//          y = multiplier fractional digit, either '0' or '5'
+{
+    char *param = str;
+    char *paramEnd = NULL;
+
+    unsigned short integral = 0;
+    unsigned short fractional = 0;
+
+    // If the string is too short, we abort.
+
+    if (!stringLongerThan(param, "/multi:")) {
+        return printParseError(str, str);
+    }
+
+    // advance param pointer to after the initial token
+
+    param += strlen("/multi:");
+
+    // The remainder must be 3 digits long and have a dot in the middle.
+
+    if (strlen(param) != 3) {
+        return printParseError(str, param);
+    } else if (param[1] != '.') {
+        return printParseError(str, param);
+    }
+
+    integral = (unsigned short)(param[0] - '0');
+    fractional = (unsigned short)(param[2] - '0');
+
+    // Check for valid values and report errors if invalid
+
+    if ((integral < 2) || (integral > 6)) {
+        return printParseError(str, param + 0);
+    } else if ((fractional != 0) && (fractional != 5)) {
+        return printParseError(str, param + 2);
+    }
+
+    // Calculate actual index. Multiply integral by 2, and offset by 1
+    // if it's a ".5" value. This value is used as an index to
+    // k6_multiplierValues in K6.H
+
+    *multiplierValueIndex = (integral << 1) + (fractional == 5);
+
+    *setupMode = 1;
+    return 1;
+}

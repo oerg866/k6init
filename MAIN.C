@@ -54,6 +54,11 @@ int main (int argc, char **argv)
                                     // 0  = autodetect
                                     // -1 = don't config
 
+    int multiplierSetup = 0;        // Indicates whether user wants to set
+                                    // the CPU multiplier (K6-2+/III+ only)
+                                    // 1  = set the multiplier
+                                    // 0  = skip
+
     int doLfbScan = 1;              // By default, we scan for LFB in VBE.
 
     int cpuType = k6_processorTypeNONE;  // the detected CPU type.
@@ -64,6 +69,7 @@ int main (int argc, char **argv)
     unsigned long parsedMtrrAddr = 0UL;
     unsigned long parsedMtrrSize = 0UL;
     unsigned long parsedWASize = 0UL;
+    unsigned short parsedMultiplierIndex = 0;
     int parsedWAMemoryHole = 0;
 
     memset(&mtrrSetup, 0, sizeof(mtrrConfigInfo));
@@ -133,6 +139,11 @@ int main (int argc, char **argv)
             // Set Write Ordering Mode
             ret = getWriteOrderValues(argv[i], &writeOrderSetup);
 
+        } else if (stringStartsWith(argv[i], "/multi:")) {
+
+            // Set Multiplier (K6-II only!)
+            ret = getMultiplierValues(argv[i], &multiplierSetup, &parsedMultiplierIndex);
+
         } else if (stringStartsWith(argv[i], "/help")) {
 
             // Print usage info. We exit after this.
@@ -158,6 +169,13 @@ int main (int argc, char **argv)
 
     if (!doLfbScan) {
         printf("Disabling automatic VBE LFB scan.\n");
+    }
+
+    // Check for supported CPU for Multiplier operation
+
+    if (multiplierSetup && (cpuType != k6_processorTypePLUS)) {
+        printf("ERROR: Multiplier setting not supported on this CPU! Aborting.\n");
+        goto cleanup;
     }
 
     // Setup Write Allocate
@@ -186,6 +204,12 @@ int main (int argc, char **argv)
         setWriteOrderMode(writeOrderSetup);
     } else {
         printf("Skipping setup of Write Ordering.\n");
+    }
+
+    // Setup Multiplier
+
+    if (multiplierSetup) {
+        setMultiplier(parsedMultiplierIndex);
     }
 
     goto cleanup;
