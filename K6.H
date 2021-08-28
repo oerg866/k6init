@@ -54,6 +54,7 @@ int configureWriteCombining(mtrrConfigInfo *mtrrsToConfigure, int doLfbScan);
 void mtrrConfigInfoAppend(mtrrConfigInfo *dst,
                           unsigned long address,
                           unsigned long size);
+void disableWriteCombining(void);
 
 // Memory / Write Allocate stuff
 

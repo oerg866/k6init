@@ -101,6 +101,12 @@ int main (int argc, char **argv)
                                      parsedMtrrSize);
             }
 
+        } else if (stringStartsWith(argv[i], "/wcdisable")) {
+
+            // Disable Write Combining compeltely in the CPU.
+
+            disableWriteCombining();
+
         } else if (stringStartsWith(argv[i], "/nolfbscan")) {
 
             // Disable LFB Scan

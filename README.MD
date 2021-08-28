@@ -88,6 +88,10 @@ Valid parameters:
 
     **This parameter can be used twice.**
 
+- `/wcdisable`
+
+    Disables Write Combining completely. Overwrites any MTRR registers.
+
 - `/nolfbscan`
 
     Disables automatic scan for GPU Memory Size and LFB regions.

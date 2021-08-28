@@ -353,6 +353,19 @@ int configureWriteCombining(mtrrConfigInfo *mtrrsToConfigure,
 
 }
 
+void disableWriteCombining(void)
+// Disable write combining completely by overwriting MTRRs
+// with zero.
+{
+    int i;
+
+    printf("Disabling Write Combining (overwriting MTRRs)\n");
+
+    for (i = 0; i < k6_maximumMTRRCount; i++) {
+        k6_setMTRR(i, 0x00000000UL);
+    }
+}
+
 unsigned long getMemorySize(void)
 {
     // Basically a wrapper function for k6_getMemorySize
