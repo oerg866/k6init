@@ -132,7 +132,7 @@ k6_getCPUProcessorType ENDP
 ; Parameters: WORD containing the mode (this is what ends up)
 ;                  in the rprocessor EFER[3] and EFER[2] bits.
 
-k6_setWriteCombineMode PROC C uses eax ebx ecx, writeCombineMode:WORD
+k6_setWriteOrderMode PROC C uses eax ebx ecx, writeOrderMode:WORD
 
 k6_MSR_EFER         EQU 0C0000080h
 
@@ -156,7 +156,7 @@ k6_MSR_EFER         EQU 0C0000080h
     ; prepare the EWBEC bits with the word supplied in writeOrderMode
 
     xor ebx, ebx
-    mov bx, writeCombineMode
+    mov bx, writeOrderMode
     shl bx, 2
     and bx, 0Ch
 
@@ -170,7 +170,7 @@ k6_MSR_EFER         EQU 0C0000080h
 
     ret
 
-k6_setWriteCombineMode ENDP
+k6_setwriteOrderMode ENDP
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; setWriteAllocate
