@@ -226,7 +226,6 @@ k6_MSR_UWCCR    EQU 0C0000085h
     mov ecx, k6_MSR_UWCCR ; UC/WC Cacheability Control Register (UWCCR)
     xor ebx, ebx
     mov bx, mtrrIndex
-    add ecx, ebx
 
     ; First read the MSR because we only change 1 dword
 
