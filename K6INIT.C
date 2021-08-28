@@ -512,7 +512,9 @@ void setWriteOrderMode(int writeOrderMode)
         printf("Invalid Write Order Mode value.\n");
         return;
     }
-    printf("Setting Write Order mode to '%s' (%d)",
+    printf("Setting Write Order mode to '%s' (%d)\n",
         k6_writeOrderModeStrings[writeOrderMode],
         writeOrderMode);
+
+    k6_setWriteOrderMode(writeOrderMode);
 }
