@@ -189,6 +189,8 @@ int getWriteOrderValues(char *str, int *setupMode)
     } else {
         return printParseError(str, param);
     }
+
+    return 1;
 }
 
 int getWriteAllocateValues(char *str, int *setupMode,
