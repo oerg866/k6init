@@ -13,33 +13,19 @@ In the future it will also let you set the multiplier on K6-3 models.
 I'm doing this because I want my K6 machine to be fast.
 
 # Project Status
-
-## Does this work yet?
-
-Yes! I mean... I think? Please help by testing!
-
 ## What does it (not) do so-far?
 
-* Find and check for supported CPU types using `cpuid`
-  * yes
-* Find VESA BIOS and VESA modes
-  * yes
-* Find LFB address
-  * yes
-* Set MTRR to enable Write combining for LFB
-  * yes
-* Set Write Combine Mode
-  * yes
-* Detect total available system memory
-  * yes
-* Detect 15-16M Memory hole
-  * yes
-* Set write allocate for system memory
-  * yes
-* Is well-tested
-  * **No** :D
-* Set K6-3 Multiplier
-  * I don't actually own this CPU. ETA: When the cows come home
+- [x] Find and check for supported CPU types using `cpuid`
+- [x] Find VESA BIOS and VESA modes
+- [x] Find LFB address
+- [x] Set MTRR to enable Write combining for LFB
+- [x] Set Write Combine Mode
+- [x] Detect total available system memory
+- [x] Detect 15-16M Memory hole
+- [x] Set write allocate for system memory
+- [x] Set K6-2+/III+ Multiplier (untested, don't own this CPU)
+- [ ] Set K6-2+/III+ voltage settings (not sure if there's a point)
+- [ ] Enable/Disable CPU Cache
 
 
 ## Supported Processors
