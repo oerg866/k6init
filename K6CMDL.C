@@ -115,7 +115,7 @@ int getMtrrValues(char *str, unsigned long *address, unsigned long *size)
     // If the string is too short
 
     if (!stringLongerThan(param, "/wc:")) {
-        return printParseError(str, str);
+        return printParseError(str, str + strlen(str));
     }
 
     // advance param pointer to after the initial token
@@ -129,7 +129,7 @@ int getMtrrValues(char *str, unsigned long *address, unsigned long *size)
     // now there should be a comma and there should be more after that.
 
     if ((paramEnd[0] != ',') || (strlen(paramEnd) < 1)) {
-        return printParseError(str, param);
+        return printParseError(str, paramEnd);
     }
 
     param = paramEnd + 1;
@@ -145,7 +145,11 @@ int getMtrrValues(char *str, unsigned long *address, unsigned long *size)
     // If there was an error during the last conversion or
     // there's garbage at the end of the line, we still return an error.
 
-    return (paramEnd[0] == '\0');
+    if (paramEnd[0] == '\0') {
+        return 1;
+    } else {
+        return printParseError(str, paramEnd);
+    }
 
 }
 
@@ -245,7 +249,7 @@ int getWriteAllocateValues(char *str, int *setupMode,
     // now there should be a comma and one more character after that.
 
     if ((paramEnd[0] != ',') || (strlen(paramEnd) != 2)) {
-        return printParseError(str, param);
+        return printParseError(str, paramEnd);
     }
 
     param = paramEnd + 1;
