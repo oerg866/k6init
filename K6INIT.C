@@ -17,7 +17,7 @@ int checkAuthenticAMD(void)
 
 }
 
-int checkSupportedCPU(void)
+int getSupportedCPUType(void)
 {
     cpuidProcessorType cpu;
 
@@ -30,27 +30,28 @@ int checkSupportedCPU(void)
 
     // Supported CPUs
     // Family   Model     Stepping
-    // 5        8         C         AMD K6-II(CXT)
+    // 5        8         C         AMD K6-2(CXT)
     // 5        9         --        AMD K6-III
-    // 5        D         --        AMD K6-II+ / K6-IIIE+
+    // 5        D         --        AMD K6-2+ / K6-III+
 
     if (cpu.family != 5) {
         printf("Unsupported CPU family!\n");
-        return 0;
+        return k6_processorTypeNONE;
     }
 
     if (cpu.model == 0x08 && cpu.stepping == 0x0C)    {
-        printf("AMD K6-II (CXT) detected!\n");
+        printf("AMD K6-2 (CXT) detected!\n");
+        return k6_processorTypeCXT;
     } else if (cpu.model == 0x09) {
         printf("AMD K6-III detected!\n");
+        return k6_processorTypeK6_3;
     } else if (cpu.model == 0x0D) {
-        printf("AMD K6-II+ / K6-IIIE+ detected!\n");
+        printf("AMD K6-2+ / K6-III+ detected!\n");
+        return k6_processorTypePLUS;
     } else {
         printf("Unsupported CPU Model / Stepping!\n");
-        return 0;
+        return k6_processorTypeNONE;
     }
-
-    return 1;
 }
 
 static int isKnownLFB(unsigned long *lfbList, unsigned long lfbToCheck)

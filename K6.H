@@ -12,9 +12,14 @@
 
 // Constants
 
-#define k6_maximumMTRRCount  2
+#define k6_processorTypeNONE            0   // Unsupported CPU
+#define k6_processorTypeCXT             1   // AMD K6-2 Chomper Extended
+#define k6_processorTypeK6_3            2   // AMD K6-3                    ^
+#define k6_processorTypePLUS            3   // AMD K6-2+/III+ -- This supports chanigng
 
-static char k6_writeOrderModeStrings[][256] = {
+#define k6_maximumMTRRCount             2   // Amount of MTRR registers.
+
+static const char k6_writeOrderModeStrings[][256] = {
     "All (Slow)",                                       // 0
     "All except Uncacheable/Write-Combined (Fast)",     // 1
     "None (Fastest)"                                    // 2
@@ -50,7 +55,7 @@ extern unsigned short k6_getVBEModeInfo(unsigned short videoMode,
 
 unsigned long getMemorySize(void);
 int checkAuthenticAMD(void);
-int checkSupportedCPU(void);
+int getSupportedCPUType(void);
 int configureWriteCombining(mtrrConfigInfo *mtrrsToConfigure, int doLfbScan);
 void mtrrConfigInfoAppend(mtrrConfigInfo *dst,
                           unsigned long address,

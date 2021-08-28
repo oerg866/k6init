@@ -56,6 +56,8 @@ int main (int argc, char **argv)
 
     int doLfbScan = 1;              // By default, we scan for LFB in VBE.
 
+    int cpuType = k6_processorTypeNONE;  // the detected CPU type.
+
     int i;
     int ret = 1;
 
@@ -78,7 +80,9 @@ int main (int argc, char **argv)
         goto cleanup;
     }
 
-    if (!checkSupportedCPU()) {
+    cpuType = getSupportedCPUType();
+
+    if (cpuType == k6_processorTypeNONE) {
         printf("Aborting\n");
         goto cleanup;
     }
