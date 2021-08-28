@@ -35,7 +35,7 @@ Yes! I mean... I think? Please help by testing!
 * Detect 15-16M Memory hole
   * yes
 * Set write allocate for system memory
-  * yes 
+  * yes
 * Is well-tested
   * **No** :D
 * Set K6-3 Multiplier
@@ -77,8 +77,8 @@ Valid parameters:
 
     Enables Write Combining for a given range.
 
-    - `address` Starting address for Write Combining. 
-                This is a 32-bit hexadecimal value. 
+    - `address` Starting address for Write Combining.
+                This is a 32-bit hexadecimal value.
                 (e.g. `e0000000`)
 
     - `size`    Size of the write combining region in **kilobytes**.
@@ -95,7 +95,7 @@ Valid parameters:
 
 - `/vga`
 
-    Enables Wirte Combining for the VGA memory region (`A0000`-`BFFFF`). 
+    Enables Wirte Combining for the VGA memory region (`A0000`-`BFFFF`).
     Not done by default because it is *potentially unsafe*.
 
     **WARNING**: If you enable this, you **MUST NOT** use this memory
@@ -115,7 +115,7 @@ Valid parameters:
              **kilobytes**.
              This is a decimal value (e.g. `131072`)
 
-    - `hole` Can be `y` or `n` to indicate presence or absence 
+    - `hole` Can be `y` or `n` to indicate presence or absence
         of the 15-16M memory hole.
 
     Example: `/wa:131072:n`.
