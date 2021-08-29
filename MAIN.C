@@ -212,18 +212,12 @@ int main (int argc, char **argv)
         setMultiplier(parsedMultiplierIndex);
     }
 
-    goto cleanup;
-
-
-    signal(SIGINT, SIG_IGN);
-    _harderr(HardErrorTrap);
-
     /*  Tidy up.  */
 
 cleanup:
     CloseAllFiles ();
     FreeEnvironment ();
-    ExitKeepC (0, 0);
+    return 0;
 }
 
 static void PutError (char *str, ...)
