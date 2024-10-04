@@ -388,8 +388,6 @@ static bool k6init_doL2Cfg(void) {
 }
 
 static bool k6init_autoSetup(void) {
-    memset(&s_params, 0, sizeof(s_params));
-
     s_params.wAlloc.setup      = (s_sysInfo.memSize > 0);
     s_params.wAlloc.size       = s_sysInfo.memSize / 1024UL;
     s_params.wAlloc.hole       = s_sysInfo.memHole;
@@ -404,7 +402,7 @@ static bool k6init_autoSetup(void) {
     s_params.l2Cache.enable    = true;
 
     retPrintErrorIf(k6init_findAndAddLFBsToMTRRConfig() == false, "LFB detection failed! Skipping Write Combine.", 0);
-    retPrintErrorIf(s_params.wAlloc.setup == false, "Memory detection failed! Skipping Write Allocate.", 0);
+    retPrintErrorIf(s_params.wAlloc.setup == false,               "Memory detection failed! Skipping Write Allocate.", 0);
     return true;
 }
 
