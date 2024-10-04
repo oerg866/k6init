@@ -1,32 +1,47 @@
 # K6INIT
 
-## What is this?
+(C) 2021 - 2024, Eric Voirin (oerg866)
 
-This is a driver for MS-DOS to replace `k6dos.sys` which is a bit useless and unflexible. It does not support the CXT versions of the K6-II.
+![image](screenshots/k6init_status.png)
+![image](screenshots/k6init_auto.png)
+![image](screenshots/k6init_multi.png)
 
-On the newer K6-2/2+/3+ models there are features that benefit system performance in select applications greatly, such as games.
+---
 
-This driver sets Write allocation and Write Combining for the LFB memory on these models.
+**K6INIT** is a driver for MS-DOS that lets you configure special features of AMD K6-2/2+/3/3+ processors, replacing tools like `k6dos.sys` and `setk6.exe`, and is similar to FASTVID on Pentium systems.
 
-In the future it will also let you set the multiplier on K6-3 models.
+While **K6INIT** can run completely autonomously, it supports manual, detailed control over **Memory Type Range Registers** (including Write-Combine and Cachability modes), **Write Allocate**, **Write Ordering**, **CPU Cache** and **Frequency Multiplier**.
 
-I'm doing this because I want my K6 machine to be fast.
+In contrast to other tools, **K6INIT** can be loaded from `CONFIG.SYS`, so it works
+even with an extended memory manager (such as `EMM386`) installed.
 
-# Project Status
-## What does it (not) do so-far?
+If called with the `/auto` parameter, **K6INIT** does the following:
 
-- [x] Find and check for supported CPU types using `cpuid`
-- [x] Find VESA BIOS and VESA modes
-- [x] Find LFB address
-- [x] Set MTRR to enable Write combining for LFB
-- [x] Set Write Combine Mode
-- [x] Detect total available system memory
-- [x] Detect 15-16M Memory hole
-- [x] Set write allocate for system memory
-- [x] Set K6-2+/III+ Multiplier (untested, don't own this CPU)
-- [ ] Set K6-2+/III+ voltage settings (not sure if there's a point)
-- [ ] Enable/Disable CPU Cache
+- *Write Ordering mode* to **1 (All except UC/WC)**
+- *Write Allocate* for **all system memory** (auto detected)
+- *Write Combining* for **Linear Frame Buffer(s) exposed by VESA BIOS**
+  (auto detected)
+- *L1 Cache* to **Enabled**
+- *L2 Cache* to **Enabled** (supported CPUs only!)
 
+This can be altered and overridden with many command line parameters.
+
+**K6INIT** runs on Chomper Extended (CXT) K6-2 chips or later.
+
+**K6INIT** was built using the [LIB866D DOS Real-Mode Software Development Library](https://github.com/oerg866/lib866d)
+
+## Features
+
+- [x] Detect CPU type automatically
+- [x] Detect total available system memory (Using E820 and E801 methods)
+- [x] Detect 15-16M Memory hole automatically
+- [x] Give precise control over **Memory Type Range Registers (MTRRs)** including **Write-Combine** and **Uncacheable** modes.
+- [x] Set MTRR to enable Write combining for Linear Frame Buffers (LFBs) automatically (requires graphics card with VESA BIOS extensions)
+- [x] Set Write allocate for system memory
+- [x] Set Write Order mode
+- [x] Set K6-2+/III+ Frequency Multiplier
+- [X] Enable/Disable L1 Cache
+- [X] Enable/Disable L2 Cache (K6-2+/K6-III/K6-III+ only)
 
 ## Supported Processors
 
@@ -36,139 +51,138 @@ I'm doing this because I want my K6 machine to be fast.
 | AMD K6-III              | 5      | 9     | *Any*    |
 | AMD K6-2+ / AMD K6-III+ | 5      | D     | *Any*    |
 
+## System Requirements
+
+* Supported AMD K6 family CPU (see above)
+* Microsoft MS-DOS 5.0 (or compatible) or higher
+    * [X] Microsoft Windows 95/98 support
+    * [X] FreeDOS support
+    * Other systems such as DR-DOS untested, but should work.
+
+
+
+
 # Running the Driver
 
 Usage (config.sys):
-`DEVICE=K6INIT.C <parameters>`
+`DEVICE=K6INIT.EXE <parameters>`
 
 Usage (command line):
 `K6INIT.EXE <parameters>`
 
-All parameters are **OPTIONAL**. They should only be used by
-knowledgeable users.
-
-By default, the program sets the following CPU features:
-
-- Write Ordering mode to 1 (All except UC/WC)
-- Write Allocate for System memory (auto detected)
-- Write Combining for Linear Frame Buffer(s) exposed by VESA BIOS
-  (auto detected)
-
-This configuration sequence can be changed using the command line parameters.
+All parameters are case-inensitive. Parameters other than `/auto` should only be used by knowledgeable users.
 
 ## Command Line Parameters
-Valid parameters:
-- `/help`
 
-    Prints a (shortened) parameter list.
+K6INIT offers several command-line options to configure and manage memory settings, CPU features, and other system parameters. Below is a detailed explanation of each parameter.
 
-- `/wc:<address>,<size>`
+### `/help`
+**Description:** Prints this list of parameters.
 
-    Enables Write Combining for a given range.
+---
+### `/status`
+**Description:** Displays the current program status.
 
-    - `address` Starting address for Write Combining.
-                This is a 32-bit hexadecimal value.
-                (e.g. `e0000000`)
+---
+### `/auto`
+**Description:** Fully automated setup.
 
-    - `size`    Size of the write combining region in **kilobytes**.
-                This is a decimal value. (e.g. `32768`)
+---
+### `/mtrr:offset,size,wc,uc`
+**Description:** Enables Write Combining for a specific memory range.
+**Parameters:**
+  - `offset`: Linear offset (e.g., `0xE0000000`)
+  - `size`: Length in kilobytes (e.g., `8192`)
+  - `wc`: Write-combine flag (`1` to enable, `0` to disable)
+  - `uc`: Uncacheable flag (`1` to enable, `0` to disable)
 
-    Example:  `/wc:e0000000,32768`
+**Notes:**
+  - The `/mtrr` option can be used twice.
+  - Discards any MTRRs configured before running the program.
 
-    **This parameter can be used twice.**
+---
+### `/lfb`
+**Description:** Automatically finds and enables Write Combining for the Linear Frame Buffer (LFB).
 
-- `/wcdisable`
+---
+### `/vga`
+**Description:** Enables Write Combining for the VGA memory region (`A0000-BFFFF`).
+**Notes:**
+  - **Warning:** This option is potentially unsafe. Do not use this memory region for Upper Memory Blocks (UMBs).
+  - Equivalent to: `/wc:0xA0000,128,1,0`
 
-    Disables Write Combining completely. Overwrites any MTRR registers.
+---
+### `/nomtrr`
+**Description:** Disables Memory Type Range Registers (MTRRs) entirely.
+**Notes:**
+  - Clears any existing MTRRs, including Write-Combined and Uncacheable regions.
 
-- `/nolfbscan`
+---
+### `/wa:size`
+**Description:** Configures Write Allocate (WA) settings.
+**Arguments:**
+  - `size`: Memory size in kilobytes.
 
-    Disables automatic scan for GPU Memory Size and LFB regions.
-    *Tip: Use this with `/wc` to set a manual region (or two)!*
+**Notes:**
+  - Set this to `0` to disable Write Allocate.
 
-- `/vga`
+---
+### `/wahole`
+**Description:** Forces 15-16 MB memory hole skipping for Write Allocate.
+**Notes:**
+  - K6INIT detects the memory hole automatically, but this option can be used to force it.
 
-    Enables Wirte Combining for the VGA memory region (`A0000`-`BFFFF`).
-    Not done by default because it is *potentially unsafe*.
+---
+### `/wo:mode`
+**Description:** Configures the Write Order Mode.
+**Arguments:**
+  - `mode`: A single digit representing the desired mode.
+    - `0`: All memory regions (Slow)
+    - `1`: All except uncacheable or write-combined regions (Fast)
+    - `2`: No memory regions (Fastest)
 
-    **WARNING**: If you enable this, you **MUST NOT** use this memory
-    region for UMBs. Exclude it in your memory manager.
+---
+### `/multi:x.y`
+**Description:** Configures the CPU frequency multiplier.
+**Arguments:**
+  - `x`: Integral part of the multiplier.
+  - `y`: Fractional part of the multiplier.
 
-    This parameter is equivalent to `/wc:a0000,128`.
+**Notes:**
+  - Requires a K6-2+ or K6-III+ CPU.
+  - Example usage: `/multi:5.5`
 
-- `/wa:n`
+---
+### `/l1:1/0`
+**Description:** Enables (`1`) or disables (`0`) the Level 1 cache.
 
-    Disables configuration of Write Allocate.
+---
+### `/l2:1/0`
+**Description:** Enables (`1`) or disables (`0`) the Level 2 cache.
+**Notes:**
+  - Only K6-2+ and K6-III+ CPUs have an on-die L2 cache.
 
-- `/wa:<size>,<hole>`
+---
 
-    Manual Setup of Write Allocate.
+# Building **K6INIT**
 
-    - `size` Write Allocate region limit (i.e. memory size.) in
-             **kilobytes**.
-             This is a decimal value (e.g. `131072`)
+## Required Build Environment
 
-    - `hole` Can be `y` or `n` to indicate presence or absence
-        of the 15-16M memory hole.
-
-    Example: `/wa:131072:n`.
-
-- `/wo:<mode>`
-
-    Manual Setup of Write Ordering mode.
-
-    - `mode` is a single digit to indicate the mode:
-
-        - `0` for all memory regions (slow)
-        - `1` for all except uncacheable / write combine
-              memory regions (fast, **this is the default**)
-        - `2` for none (fastest)
-        - `n` skip configuration of Write Ordering completely.
-
-    Example: `/wo:2`
-
-- `/multi:<x>,<y>`
-
-    Set the CPU bus frequency multiplier.
-
-    - `x` integral part of the multiplier value, a digit from `2` to `6`
-
-    - `y` fractional part of the multiplier value, either `0` or `5`
-
-    Example: `/multi:5.5`
-
-    **IMPRORTANT: This feature can only be used on K6-2+ and K6-III+ CPUs!**
-
-    **WARNING: This feature is UNTESTED because I do not own a "+" CPU!
-    Testers wanted!**
-
-
-# Building
-
-## Why in C?
-
-Because I hate / suck at x86 assembly and I want flexibility, such as more complex(ish) command line parsing which is hard to do in ASM...
-
-Normally you should really do this in assembly. But YOLO.
-## Requirements
-
-* MS-DOS 6.xx or 7.xx or Windows 9x
+* MS-DOS 6.xx or 7.xx or Windows 95/98
 * Microsoft C / C++ Compiler Version 7.00
-  * Also works with Microsoft Visual C++ 1.52, but not recommended because that's not really meant for development under pure DOS.
-  * In this case you need a 32-Bit DOS Extender such as HX-DOS. The DOSXNT that is included doesn't play nice with my machine sadly.
-* Microsoft Macro Assembler Version 6.11
+  * latest patch set required
+  * Also works with Microsoft Visual C++ 1.52. This is not recommended because it is not really meant for pure DOS development.
+
+    In this case you need a 32-Bit DOS Extender such as HX-DOS. The DOSXNT that is included doesn't play nice with my machine sadly.
+* `LIB` and `INCLUDE` directories from the **DOS Internals** disk bundled with **Geoff Chappell's* excellent book of the same name
+    Can be acquired here: https://www.pcjs.org/software/pcx86/sw/books/dos_internals/
+
+    I have requested permission from *Geoff Chappell* to bundle these files with the **K6INIT** repository, but have not yet received a response.
+* Updates for the above libraries from *Geoff Chappell's* website: https://www.geoffchappell.com/notes/dos/internals/crtdrvr/update.htm?ta=8.714286804199219&tx=6
 * DPMI host (not necessary on Windows)
   * I use HXDPMI32 ([part of HXDOS by Japheth](https://www.japheth.de/HX.html)).
 
-## Evironment setup
-
-* Install Microsoft C/C++ 7.00
-* Install all the patches for Microsoft C 7.00
-* Install Microsoft Macro Assembler 6.11
-* Install the LIB/INCLUDE directories from the book "DOS Internals" by Geoff Chapell
-  * Obtainable at a certain blue background retro software library. Will make this easily accessible somewhere soon.
-* Install the 2008 updates to CRTDRV.LIB by Geoff Chapell
-  * Obtainable [here.](https://www.geoffchappell.com/notes/dos/internals/crtdrvr/update.htm)
+*Note: Previous versions required the Microsoft Macro Assembler to build. As LIB866D includes macros that allow the usage of unsupported opcodes in inline assembly, this is no longer the case.*
 
 ## Building
 
@@ -178,6 +192,20 @@ nmake
 ```
 
 That's all.
+
+### Borland and Watcom Compiler support
+
+While **Borland C/C++ 3.x**, **Borland Turbo C/C++ 3.0** and **OpenWatcom v2** are technically supported, the resulting executable will not be loadable in `CONFIG.SYS`. Use the following commands to compile them:
+
+#### Borland Turbo C/C++:
+
+`tcc -wall -g1 -Ilib866d -ek6init.exe lib866d\*.c k6init.c`
+
+#### Borland C/C++:
+`bcc -wall -g1 -Ilib866d -ek6init.exe lib866d\*.c k6init.c`
+
+#### OpenWatcom:
+`wcl -wcd111 -w9 -bt=dos -Ilib866d lib866d\*.c k6init.c`
 
 ## Build environment issues
 
@@ -206,4 +234,4 @@ Because when I load it, it reboots my computer. %-)
 
 # License
 
-[CC-BY-NC 3.0, click here for info](https://creativecommons.org/licenses/by-nc/3.0)
+[Creative Commons Attribution-NonCommercial-ShareAlike 4.0 (CC BY-NC-SA 4.0)](https://creativecommons.org/licenses/by-nc/4.0/deed.en)
