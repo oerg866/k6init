@@ -1,0 +1,21 @@
+# Microsoft C/C++ 7.00 Makefile for K6INIT
+
+CC  = cl
+LINK = link
+CFLAGS = /c /Ox /WX /nologo /ILIB866D
+
+TARGETS : K6INIT.EXE
+
+clean:
+  del *.obj
+  del *.exe
+
+OBJ = LIB866D\*.OBJ K6INIT.OBJ
+
+#   Link with DRIVER.ASM, CRTDRVR.LIB and CRTKEEPC.LIB
+
+K6INIT.EXE : clean $(OBJ)
+    $(LINK) driver+crtdrvr.lib+crtkeepc.lib+ARGS+CPU_K6+UTIL+VESABIOS+VGACON+SYS+K6INIT,K6INIT.EXE;
+
+.c.obj:
+    $(CC) $(CFLAGS) $<
