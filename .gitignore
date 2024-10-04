@@ -1,5 +1,9 @@
 .vscode/
 
-*.OBJ
-*.LIB
+bin/
+BIN/
 
+*.OBJ
+*.obj
+*.LIB
+*.lib
