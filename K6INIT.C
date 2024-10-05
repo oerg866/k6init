@@ -488,7 +488,7 @@ static const char k6init_appDescription[] =
 
 static const args_arg k6init_args[] = {
     ARGS_HEADER(k6init_versionString, k6init_appDescription),
-    ARGS_USAGE("help", "Prints parameter list"),
+    ARGS_USAGE("?", "Prints parameter list"),
 
     { "status",     NULL,               "Display current program status.",                      ARG_FLAG,               NULL,                       NULL },
 
