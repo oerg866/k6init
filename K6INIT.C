@@ -8,6 +8,7 @@
 #include "util.h"
 #include "args.h"
 #include "sys.h"
+#include "pci.h"
 #include "cpu_k6.h"
 
 #define __LIB866D_TAG__ "K6INIT"
@@ -66,7 +67,7 @@ static struct {
 
 static char         s_multiToParse[4] = {0,};
 static u32          s_MTRRCfgQueue[4];
-static const char   k6init_versionString[] = "K6INIT Version 1.04 - (C) 2021-2024 Eric Voirin (oerg866)";
+static const char   k6init_versionString[] = "K6INIT Version 1.06 - (C) 2021-2024 Eric Voirin (oerg866)";
 
 #define retPrintErrorIf(condition, message, value) if (condition) { vgacon_printError(message "\n", value); return false; }
 
@@ -109,6 +110,13 @@ static bool k6init_argAddMTRR(const void *arg) {
     return k6init_addMTRRToConfig(toParse[0], toParse[1], (bool) toParse[2], (bool) toParse[3]);
 }
 
+static bool k6init_isKnownMTRRAddress(u32 address) {
+    if (s_params.mtrr.setup == false)                       return false;
+    if (address == s_params.mtrr.toSet.configs[0].offset)   return true;
+    if (address == s_params.mtrr.toSet.configs[1].offset)   return true;
+    return false;
+}
+
 /* Finds LFB addresses and stuff. */
 bool k6init_findAndAddLFBsToMTRRConfig(void) {
     vesa_ModeInfo   currentMode;
@@ -127,8 +135,10 @@ bool k6init_findAndAddLFBsToMTRRConfig(void) {
 
         if (currentMode.attributes.hasLFB) {
             /* Check if the address is already known */
-            if (currentMode.lfbAddress == s_params.mtrr.toSet.configs[0].offset) continue;
-            if (currentMode.lfbAddress == s_params.mtrr.toSet.configs[1].offset) continue;
+            if (k6init_isKnownMTRRAddress(currentMode.lfbAddress)) {
+                lfbsFound++;
+                continue;
+            }
 
             vgacon_print("Found Linear Frame Buffer at: 0x%08lx\n", currentMode.lfbAddress);
             L866_ASSERTM(lfbsFound < 2, "More than two unique LFB addresses found! Please configure manually!");
@@ -145,9 +155,57 @@ bool k6init_findAndAddLFBsToMTRRConfig(void) {
     return true;
 }
 
+bool k6init_findAndAddPCIFBsToMTRRConfig(void) {
+    pci_Device     *curDevice = NULL;
+    pci_DeviceInfo  curDeviceInfo;
+    size_t          pciFbsFound = 0;
+    u32             i;
+
+    while (NULL != (curDevice = pci_getNextDevice(curDevice))) {
+        retPrintErrorIf(pci_populateDeviceInfo(&curDeviceInfo, *curDevice) == false, "Failed to read PCI device info!", 0);
+
+        /* If this isn't a VGA card, continue searching */
+        if (curDeviceInfo.classCode != CLASS_DISPLAY || curDeviceInfo.subClass != 0x00)
+            continue;
+
+        vgacon_print("Found Graphics Card, Vendor 0x%04x, Device 0x%04x\n", curDeviceInfo.vendor, curDeviceInfo.device);
+
+        for (i = 0; i < PCI_BARS_MAX; i++) {
+            if (curDeviceInfo.bars[i].type != PCI_BAR_MEMORY)   continue; /* Must be memory BAR */
+            if (curDeviceInfo.bars[i].size < 1048576UL)         continue; /* Must be at least 1MB */
+
+            /* Check if address is already known */
+            if (k6init_isKnownMTRRAddress(curDeviceInfo.bars[i].address)) {
+                pciFbsFound++;
+                continue;
+            }
+
+            vgacon_print("Found PCI/AGP frame buffer at: 0x%08lx\n", curDeviceInfo.bars[i].address);
+
+            if (false == k6init_addMTRRToConfig(curDeviceInfo.bars[i].address, curDeviceInfo.bars[i].size / 1024UL, true, false)) {
+                return false;
+            }
+
+            pciFbsFound++;
+        }
+    }
+
+    retPrintErrorIf(pciFbsFound == 0, "No PCI/AGP Frame Buffers were found!", 0);
+
+    if (curDevice != NULL)
+        free(curDevice);
+
+    return true;
+}
+
 static bool k6init_argAddLFBMTRR(const void *arg) {
     UNUSED_ARG(arg);
     return k6init_findAndAddLFBsToMTRRConfig();
+}
+
+static bool k6init_argAddPCIMTRR(const void *arg) {
+    UNUSED_ARG(arg);
+    return k6init_findAndAddPCIFBsToMTRRConfig();
 }
 
 static bool k6init_argAddVGAMTRR(const void *arg) {
@@ -248,11 +306,11 @@ static void k6init_printCompactMTRRConfigs(const char *optionalTag, bool newLine
 
     for (i = 0; i < 2; i++) {
         if (s_sysInfo.mtrrs.configs[i].isValid == true) {
-            printf("<#%u: 0x%08lx, %lu KB \xFB> ", i,
-                s_sysInfo.mtrrs.configs[i].offset,
-                s_sysInfo.mtrrs.configs[i].sizeKB);
+            printf("<%u: %lu KB @ %08lx> ", i,
+                s_sysInfo.mtrrs.configs[i].sizeKB,
+                s_sysInfo.mtrrs.configs[i].offset);
         } else {
-            printf("<#%u: unconfigured> ", (u16) i);
+            printf("<%u: unconfigured> ", (u16) i);
         }
     }
 
@@ -401,8 +459,9 @@ static bool k6init_autoSetup(void) {
     s_params.l2Cache.setup     = (s_sysInfo.thisCPU == K6_III || s_sysInfo.thisCPU == K6_PLUS);
     s_params.l2Cache.enable    = true;
 
-    retPrintErrorIf(k6init_findAndAddLFBsToMTRRConfig() == false, "LFB detection failed! Skipping Write Combine.", 0);
-    retPrintErrorIf(s_params.wAlloc.setup == false,               "Memory detection failed! Skipping Write Allocate.", 0);
+    retPrintErrorIf(k6init_findAndAddPCIFBsToMTRRConfig() == false, "PCI/AGP FB detection failed! Skipping...", 0);
+    retPrintErrorIf(k6init_findAndAddLFBsToMTRRConfig() == false,   "LFB detection failed! Skipping...", 0);
+    retPrintErrorIf(s_params.wAlloc.setup == false,                 "Memory detection failed! Skipping Write Allocate.", 0);
     return true;
 }
 
@@ -445,6 +504,9 @@ static const args_arg k6init_args[] = {
                             ARGS_EXPLAIN("running this program."),
 
     { "lfb",        NULL,               "Find and enable Write Combine for Linear Frame Buffer",ARG_FLAG,               NULL,                       k6init_argAddLFBMTRR },
+
+    { "pci",        NULL,               "Find and enable Write Combine for Frame Buffers",      ARG_FLAG,               NULL,                       k6init_argAddPCIMTRR },
+                            ARGS_EXPLAIN("exposed by PCI/AGP cards (experimental)"),
 
     { "vga",        NULL,               "Enables Write Combine for the VGA memory region",      ARG_FLAG,               NULL,                       k6init_argAddVGAMTRR },
                             ARGS_EXPLAIN("(A0000-BFFFF). WARNING: Potentially unsafe."),

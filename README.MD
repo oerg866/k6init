@@ -19,7 +19,7 @@ If called with the `/auto` parameter, **K6INIT** does the following:
 
 - *Write Ordering mode* to **1 (All except UC/WC)**
 - *Write Allocate* for **all system memory** (auto detected)
-- *Write Combining* for **Linear Frame Buffer(s) exposed by VESA BIOS**
+- *Write Combining* for **Linear Frame Buffer(s) exposed by PCI/AGP graphics cards and VESA BIOS**
   (auto detected)
 - *L1 Cache* to **Enabled**
 - *L2 Cache* to **Enabled** (supported CPUs only!)
@@ -102,11 +102,16 @@ K6INIT offers several command-line options to configure and manage memory settin
 
 ---
 ### `/lfb`
-**Description:** Automatically finds and enables Write Combining for the Linear Frame Buffer (LFB).
+**Description:** Automatically finds and enables Write Combining for the Linear Frame Buffers (LFB).
+
+---
+### `/pci`
+**Description:** Automatically finds and enables Write Combining for Frame Buffers exposed by PCI / AGP graphics cards (experimental).
 
 ---
 ### `/vga`
 **Description:** Enables Write Combining for the VGA memory region (`A0000-BFFFF`).
+
 **Notes:**
   - **Warning:** This option is potentially unsafe. Do not use this memory region for Upper Memory Blocks (UMBs).
   - Equivalent to: `/wc:0xA0000,128,1,0`
@@ -114,12 +119,14 @@ K6INIT offers several command-line options to configure and manage memory settin
 ---
 ### `/nomtrr`
 **Description:** Disables Memory Type Range Registers (MTRRs) entirely.
+
 **Notes:**
   - Clears any existing MTRRs, including Write-Combined and Uncacheable regions.
 
 ---
 ### `/wa:size`
 **Description:** Configures Write Allocate (WA) settings.
+
 **Arguments:**
   - `size`: Memory size in kilobytes.
 
@@ -129,12 +136,14 @@ K6INIT offers several command-line options to configure and manage memory settin
 ---
 ### `/wahole`
 **Description:** Forces 15-16 MB memory hole skipping for Write Allocate.
+
 **Notes:**
   - K6INIT detects the memory hole automatically, but this option can be used to force it.
 
 ---
 ### `/wo:mode`
 **Description:** Configures the Write Order Mode.
+
 **Arguments:**
   - `mode`: A single digit representing the desired mode.
     - `0`: All memory regions (Slow)
@@ -144,6 +153,7 @@ K6INIT offers several command-line options to configure and manage memory settin
 ---
 ### `/multi:x.y`
 **Description:** Configures the CPU frequency multiplier.
+
 **Arguments:**
   - `x`: Integral part of the multiplier.
   - `y`: Fractional part of the multiplier.
@@ -159,6 +169,7 @@ K6INIT offers several command-line options to configure and manage memory settin
 ---
 ### `/l2:1/0`
 **Description:** Enables (`1`) or disables (`0`) the Level 2 cache.
+
 **Notes:**
   - Only K6-2+ and K6-III+ CPUs have an on-die L2 cache.
 
@@ -174,7 +185,7 @@ K6INIT offers several command-line options to configure and manage memory settin
   * Also works with Microsoft Visual C++ 1.52. This is not recommended because it is not really meant for pure DOS development.
 
     In this case you need a 32-Bit DOS Extender such as HX-DOS. The DOSXNT that is included doesn't play nice with my machine sadly.
-* `LIB` and `INCLUDE` directories from the **DOS Internals** disk bundled with **Geoff Chappell's* excellent book of the same name
+* `LIB` and `INCLUDE` directories from the **DOS Internals** disk bundled with *Geoff Chappell's* excellent book of the same name
     Can be acquired here: https://www.pcjs.org/software/pcx86/sw/books/dos_internals/
 
     I have requested permission from *Geoff Chappell* to bundle these files with the **K6INIT** repository, but have not yet received a response.
@@ -228,7 +239,7 @@ VC1.52 includes one in the form of `DOSXNT.EXE`
 
 No idea. I don't use the debugger (yet) so at the moment it is not a big deal for me but it would be cool to fix this...?
 
-### Why don't you just use 386-MAX as suggested by Microsoft?`
+### Why don't you just use 386-MAX as suggested by Microsoft?
 
 Because when I load it, it reboots my computer. %-)
 

@@ -15,7 +15,7 @@ OBJ = LIB866D\*.OBJ K6INIT.OBJ
 #   Link with DRIVER.ASM, CRTDRVR.LIB and CRTKEEPC.LIB
 
 K6INIT.EXE : clean $(OBJ)
-    $(LINK) driver+crtdrvr.lib+crtkeepc.lib+ARGS+CPU_K6+UTIL+VESABIOS+VGACON+SYS+K6INIT,K6INIT.EXE;
+    $(LINK) driver+crtdrvr.lib+crtkeepc.lib+ARGS+CPU_K6+UTIL+VESABIOS+VGACON+SYS+PCI+K6INIT,K6INIT.EXE;
 
 .c.obj:
     $(CC) $(CFLAGS) $<
