@@ -3,6 +3,12 @@
 CC  = cl
 LINK = link
 CFLAGS = /c /Ox /WX /nologo /ILIB866D
+DEBUG = 0
+
+!IF $(DEBUG)
+CFLAGS = /DDEBUG $(CFLAGS)
+!ENDIF
+
 
 TARGETS : K6INIT.EXE
 
