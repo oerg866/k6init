@@ -432,6 +432,7 @@ static bool k6init_doWriteOrderCfg(void) {
 }
 
 static bool k6init_doMultiCfg(void) {
+    retPrintErrorIf(s_sysInfo.thisCPU != K6_PLUS, "Multiplier configuration only supported on K6-2+/III+. Skipping...", 0);
     return cpu_K6_setMultiplier(s_params.multi.integer, s_params.multi.decimal);
 }
 
