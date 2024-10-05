@@ -39,6 +39,10 @@ static struct {
     /* L2 Cache Config */
     struct {    bool setup;
                 bool enable;                        } l2Cache;
+    /* Data Prefetch Config */
+    struct {    bool setup;
+                bool enable;                        } prefetch;
+
 } s_params;
 
 typedef enum {
@@ -256,6 +260,11 @@ static bool k6init_argAddL2(const void *arg) {
     return s_params.l2Cache.setup = true;
 }
 
+static bool k6init_argAddPrefetch(const void *arg) {
+    UNUSED_ARG(arg);
+    return s_params.prefetch.setup = true;
+}
+
 k6init_SupportedCPU k6init_getSupportedCPUFromCPUID(sys_CPUIDVersionInfo info) {
     if (info.basic.family == 5 && info.basic.model == 8 && info.basic.stepping == 0x0c)
         return K6_2_CXT;
@@ -450,7 +459,13 @@ static bool k6init_doL2Cfg(void) {
     return cpu_K6_setL2Cache(s_params.l2Cache.enable);
 }
 
+static bool k6init_doPrefetchCfg(void) {
+    return cpu_K6_setDataPrefetch(s_params.prefetch.enable);
+}
+
 static bool k6init_autoSetup(void) {
+    bool cpuHasL2 = (s_sysInfo.thisCPU == K6_III || s_sysInfo.thisCPU == K6_PLUS);
+
     s_params.wAlloc.setup      = (s_sysInfo.memSize > 0);
     s_params.wAlloc.size       = s_sysInfo.memSize / 1024UL;
     s_params.wAlloc.hole       = s_sysInfo.memHole;
@@ -461,8 +476,11 @@ static bool k6init_autoSetup(void) {
     s_params.l1Cache.setup     = true;
     s_params.l1Cache.enable    = true;
 
-    s_params.l2Cache.setup     = (s_sysInfo.thisCPU == K6_III || s_sysInfo.thisCPU == K6_PLUS);
+    s_params.l2Cache.setup     = cpuHasL2;
     s_params.l2Cache.enable    = true;
+
+    s_params.prefetch.setup    = true;
+    s_params.prefetch.enable   = true;
 
     retPrintErrorIf(k6init_findAndAddPCIFBsToMTRRConfig() == false, "PCI/AGP FB detection failed! Skipping...", 0);
     retPrintErrorIf(k6init_findAndAddLFBsToMTRRConfig() == false,   "LFB detection failed! Skipping...", 0);
@@ -545,6 +563,7 @@ static const args_arg k6init_args[] = {
     { "l1",         "1/0",              "Enable/Disable Level 1 cache",                         ARG_BOOL,               &s_params.l1Cache.enable,   k6init_argAddL1 },
     { "l2",         "1/0",              "Enable/Disable Level 2 cache",                         ARG_BOOL,               &s_params.l2Cache.enable,   k6init_argAddL2 },
                             ARGS_EXPLAIN("NOTE: Only K6-2+ and K6-III+ have on-die L2 Cache!"),
+    { "prefetch",   "1/0",              "Enable/Disable Data Prefetch",                         ARG_BOOL,               &s_params.prefetch.enable,  k6init_argAddPrefetch },
 };
 
 int main(int argc, char *argv[]) {
@@ -602,6 +621,8 @@ int main(int argc, char *argv[]) {
                                                                                         s_params.l1Cache.enable ? "On" : "Off");
     ok &= k6init_doIfSetupAndPrint(s_params.l2Cache.setup,  k6init_doL2Cfg,         "Set L2 Cache (%s)",
                                                                                         s_params.l2Cache.enable ? "On" : "Off");
+    ok &= k6init_doIfSetupAndPrint(s_params.prefetch.setup, k6init_doPrefetchCfg,   "Set Data Prefetch (%s)",
+                                                                                        s_params.prefetch.enable ? "On" : "Off");
     if (!ok)
         vgacon_printWarning("Summary: Some actions failed!\n");
 
