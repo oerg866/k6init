@@ -67,7 +67,7 @@ static struct {
 
 static char         s_multiToParse[4] = {0,};
 static u32          s_MTRRCfgQueue[4];
-static const char   k6init_versionString[] = "K6INIT Version 1.06 - (C) 2021-2024 Eric Voirin (oerg866)";
+static const char   k6init_versionString[] = "K6INIT Version 1.07 - (C) 2021-2024 Eric Voirin (oerg866)";
 
 #define retPrintErrorIf(condition, message, value) if (condition) { vgacon_printError(message "\n", value); return false; }
 
