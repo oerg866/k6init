@@ -432,8 +432,12 @@ static bool k6init_doWriteOrderCfg(void) {
 }
 
 static bool k6init_doMultiCfg(void) {
+    cpu_K6_SetMulError errCode;
     retPrintErrorIf(s_sysInfo.thisCPU != K6_PLUS, "Multiplier configuration only supported on K6-2+/III+. Skipping...", 0);
-    return cpu_K6_setMultiplier(s_params.multi.integer, s_params.multi.decimal);
+    errCode = cpu_K6_setMultiplier(s_params.multi.integer, s_params.multi.decimal);
+    retPrintErrorIf(errCode == SETMUL_BADMUL, "The given multiplier value is invalid and not supported!", 0);
+    retPrintErrorIf(errCode == SETMUL_ERROR, "There was a system error while setting the multiplier!", 0);
+    return true;
 }
 
 static bool k6init_doL1Cfg(void) {
