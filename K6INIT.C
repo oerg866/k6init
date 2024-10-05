@@ -161,6 +161,9 @@ bool k6init_findAndAddPCIFBsToMTRRConfig(void) {
     size_t          pciFbsFound = 0;
     u32             i;
 
+    /* We cannot do this on WINDOWS, so we yeet out. */
+    retPrintErrorIf(sys_getWindowsMode() != OS_PURE_DOS, "Cannot scan PCI devices under Windows, skipping.", 0);
+
     while (NULL != (curDevice = pci_getNextDevice(curDevice))) {
         /* If this isn't a VGA card, continue searching */
         if (pci_getClass(*curDevice) != CLASS_DISPLAY || pci_getSubClass(*curDevice) != 0x00)
