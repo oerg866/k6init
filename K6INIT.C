@@ -162,11 +162,11 @@ bool k6init_findAndAddPCIFBsToMTRRConfig(void) {
     u32             i;
 
     while (NULL != (curDevice = pci_getNextDevice(curDevice))) {
-        retPrintErrorIf(pci_populateDeviceInfo(&curDeviceInfo, *curDevice) == false, "Failed to read PCI device info!", 0);
-
         /* If this isn't a VGA card, continue searching */
-        if (curDeviceInfo.classCode != CLASS_DISPLAY || curDeviceInfo.subClass != 0x00)
+        if (pci_getClass(*curDevice) != CLASS_DISPLAY || pci_getSubClass(*curDevice) != 0x00)
             continue;
+
+        retPrintErrorIf(pci_populateDeviceInfo(&curDeviceInfo, *curDevice) == false, "Failed to read PCI device info!", 0);
 
         vgacon_print("Found Graphics Card, Vendor 0x%04x, Device 0x%04x\n", curDeviceInfo.vendor, curDeviceInfo.device);
 
