@@ -78,7 +78,7 @@ All parameters are case-inensitive. Parameters other than `/auto` should only be
 
 K6INIT offers several command-line options to configure and manage memory settings, CPU features, and other system parameters. Below is a detailed explanation of each parameter.
 
-### `/help`
+### `/?`
 **Description:** Prints this list of parameters.
 
 ---
