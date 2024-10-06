@@ -17,6 +17,7 @@
 /* This structure holds all the arguments passed to the program. */
 static struct {
     bool        autoSetup;
+    bool        printBARs;
     /* MTRR Config */
     struct {    bool setup;
                 bool clear;
@@ -71,7 +72,7 @@ static struct {
 
 static char         s_multiToParse[4] = {0,};
 static u32          s_MTRRCfgQueue[4];
-static const char   k6init_versionString[] = "K6INIT Version 1.07 - (C) 2021-2024 Eric Voirin (oerg866)";
+static const char   k6init_versionString[] = "K6INIT Version 1.1 - (C) 2021-2024 Eric Voirin (oerg866)";
 
 #define retPrintErrorIf(condition, message, value) if (condition) { vgacon_printError(message "\n", value); return false; }
 
@@ -165,6 +166,8 @@ bool k6init_findAndAddPCIFBsToMTRRConfig(void) {
     size_t          pciFbsFound = 0;
     u32             i;
 
+    retPrintErrorIf(pci_test() == false, "FATAL: Unable to access PCI bus!", 0);
+
     while (NULL != (curDevice = pci_getNextDevice(curDevice))) {
         /* If this isn't a VGA card, continue searching */
         if (pci_getClass(*curDevice) != CLASS_DISPLAY || pci_getSubClass(*curDevice) != 0x00)
@@ -194,10 +197,10 @@ bool k6init_findAndAddPCIFBsToMTRRConfig(void) {
         }
     }
 
-    retPrintErrorIf(pciFbsFound == 0, "No PCI/AGP Frame Buffers were found!", 0);
-
     if (curDevice != NULL)
         free(curDevice);
+
+    retPrintErrorIf(pciFbsFound == 0, "No PCI/AGP Frame Buffers were found!", 0);
 
     return true;
 }
@@ -463,6 +466,34 @@ static bool k6init_doPrefetchCfg(void) {
     return cpu_K6_setDataPrefetch(s_params.prefetch.enable);
 }
 
+bool k6init_doPrintBARs(void) {
+    pci_Device     *curDevice = NULL;
+    pci_DeviceInfo  curDeviceInfo;
+    u32             i;
+
+    retPrintErrorIf(pci_test() == false, "FATAL: Unable to access PCI bus!", 0);
+
+    while (NULL != (curDevice = pci_getNextDevice(curDevice))) {
+        if (pci_populateDeviceInfo(&curDeviceInfo, *curDevice) == false) {
+            vgacon_printWarning("Failed to obtain PCI device info...\n");
+            continue;
+        }
+
+        vgacon_printOK("[Device @ %u:%u:%u] ", curDevice->bus, curDevice->slot, curDevice->func);
+        printf("Vendor 0x%04x Device 0x%04x Class %02x Subclass %02x:\n",
+            curDeviceInfo.vendor, curDeviceInfo.device, curDeviceInfo.classCode, curDeviceInfo.subClass);
+        for (i = 0; i < PCI_BARS_MAX; i++) {
+            if (curDeviceInfo.bars[i].address > 0UL)
+                vgacon_print("   --> [BAR %lu] @ 0x%08lx (%s) Size %lu KB\n",
+                    i,
+                    curDeviceInfo.bars[i].address,
+                    (curDeviceInfo.bars[i].type == PCI_BAR_MEMORY) ? "Memory" : "I/O",
+                    curDeviceInfo.bars[i].size / 1024UL);
+        }
+    }
+    return true;
+}
+
 static bool k6init_autoSetup(void) {
     bool cpuHasL2 = (s_sysInfo.thisCPU == K6_III || s_sysInfo.thisCPU == K6_PLUS);
 
@@ -564,6 +595,8 @@ static const args_arg k6init_args[] = {
     { "l2",         "1/0",              "Enable/Disable Level 2 cache",                         ARG_BOOL,               &s_params.l2Cache.enable,   k6init_argAddL2 },
                             ARGS_EXPLAIN("NOTE: Only K6-2+ and K6-III+ have on-die L2 Cache!"),
     { "prefetch",   "1/0",              "Enable/Disable Data Prefetch",                         ARG_BOOL,               &s_params.prefetch.enable,  k6init_argAddPrefetch },
+
+    { "listbars",   NULL,               "List all PCI/AGP device Base Address Regions (BARs)",  ARG_FLAG,               &s_params.printBARs,        NULL },
 };
 
 int main(int argc, char *argv[]) {
@@ -609,6 +642,7 @@ int main(int argc, char *argv[]) {
     }
 
     /* Do actual execution of requested actions */
+    ok &= k6init_doIfSetupAndPrint(s_params.printBARs,      k6init_doPrintBARs,     "Print PCI/AGP device BARs");
     ok &= k6init_doIfSetupAndPrint(s_params.autoSetup,      k6init_autoSetup,       "Preparing automatic configuration");
     ok &= k6init_doIfSetupAndPrint(s_params.mtrr.setup,     k6init_doMTRRCfg,       "Set MTRR Config");
     ok &= k6init_doIfSetupAndPrint(s_params.wAlloc.setup,   k6init_doWriteAllocCfg, "Set Write Allocate Config (%lu KB)",

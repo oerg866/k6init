@@ -5,6 +5,7 @@
 ![image](screenshots/k6init_status.png)
 ![image](screenshots/k6init_auto.png)
 ![image](screenshots/k6init_multi.png)
+![image](screenshots/k6init_bars.png)
 
 ---
 
@@ -23,6 +24,7 @@ If called with the `/auto` parameter, **K6INIT** does the following:
   (auto detected)
 - *L1 Cache* to **Enabled**
 - *L2 Cache* to **Enabled** (supported CPUs only!)
+- *Data Prefetch* to **Enabled**
 
 This can be altered and overridden with many command line parameters.
 
@@ -36,12 +38,15 @@ This can be altered and overridden with many command line parameters.
 - [x] Detect total available system memory (Using E820 and E801 methods)
 - [x] Detect 15-16M Memory hole automatically
 - [x] Give precise control over **Memory Type Range Registers (MTRRs)** including **Write-Combine** and **Uncacheable** modes.
+- [x] Set MTRR to enable Write combining for PCI/AGP BAR Frame Buffers automatically
 - [x] Set MTRR to enable Write combining for Linear Frame Buffers (LFBs) automatically (requires graphics card with VESA BIOS extensions)
 - [x] Set Write allocate for system memory
 - [x] Set Write Order mode
-- [x] Set K6-2+/III+ Frequency Multiplier
+- [x] Set Frequency Multiplier (K6-2+/III+ only)
 - [X] Enable/Disable L1 Cache
 - [X] Enable/Disable L2 Cache (K6-2+/K6-III/K6-III+ only)
+- [x] Enable/Disable Data Prefetch
+- [x] List all PCI/AGP device Base Address Regions (BARs)
 
 ## Supported Processors
 
@@ -58,9 +63,6 @@ This can be altered and overridden with many command line parameters.
     * [X] Microsoft Windows 95/98 support
     * [X] FreeDOS support
     * Other systems such as DR-DOS untested, but should work.
-
-
-
 
 # Running the Driver
 
@@ -174,6 +176,15 @@ K6INIT offers several command-line options to configure and manage memory settin
   - Only K6-2+ and K6-III+ CPUs have an on-die L2 cache.
 
 ---
+### `/prefetch:1/0`
+**Description:** Enables (`1`) or disables (`0`) Data Prefetching (DPE)
+
+---
+### `/listbars`
+**Description:** Lists all Base Address Regions (BARs) exposed by PCI/AGP devices in the system.
+
+---
+
 
 # Building **K6INIT**
 
@@ -203,6 +214,14 @@ nmake
 ```
 
 That's all.
+
+### Debug build
+
+To make a build with a lot of verbose debug output, build it with `DEBUG=1`:
+
+```
+nmake DEBUG=1
+```
 
 ### Borland and Watcom Compiler support
 
