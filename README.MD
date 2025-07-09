@@ -86,8 +86,32 @@ K6INIT offers several command-line options to configure and manage memory settin
 **Description:** Displays the current program status.
 
 ---
+### `/quiet`
+**Description:** Reduce text output, only print warnings/errors
+
+---
 ### `/auto`
-**Description:** Fully automated setup.
+**Description:** Fully automated setup. It is equivalent to `/pci /lfb /wa:0 /wo:1 /l1:1 /l2:1 /prefetch:1`
+
+Parts of this procedure can be disabled with the following `/skip` parameters.
+
+---
+### `/skippci`
+**Description:** Skip PCI/AGP Frame Buffer Detection & MTRR Setup
+
+---
+### `/skiplfb`
+**Description:** Skip VESA Linear Frame Buffer Detection & MTRR Setup
+
+---
+### `/skipcpu`
+**Description:** Skip CPU internals setup (Cache, Prefetch)
+
+---
+### `/skipwawo`
+**Description:** Skip Write Allocate / Order setup
+
+The above `/skip` parameters should be used with /auto preceding them.
 
 ---
 ### `/mtrr:offset,size,wc,uc`
@@ -101,6 +125,13 @@ K6INIT offers several command-line options to configure and manage memory settin
 **Notes:**
   - The `/mtrr` option can be used twice.
   - Discards any MTRRs configured before running the program.
+
+---
+### `/mtrrclr`
+**Description:** Disables Memory Type Range Registers (MTRRs) entirely.
+
+**Notes:**
+  - Clears any existing MTRRs, including Write-Combined and Uncacheable regions.
 
 ---
 ### `/lfb`
@@ -119,13 +150,6 @@ K6INIT offers several command-line options to configure and manage memory settin
   - Equivalent to: `/wc:0xA0000,128,1,0`
 
 ---
-### `/nomtrr`
-**Description:** Disables Memory Type Range Registers (MTRRs) entirely.
-
-**Notes:**
-  - Clears any existing MTRRs, including Write-Combined and Uncacheable regions.
-
----
 ### `/wa:size`
 **Description:** Configures Write Allocate (WA) settings.
 
@@ -136,11 +160,11 @@ K6INIT offers several command-line options to configure and manage memory settin
   - Set this to `0` to disable Write Allocate.
 
 ---
-### `/wahole`
-**Description:** Forces 15-16 MB memory hole skipping for Write Allocate.
+### `/wahole:1/0`
+**Description:** Forces 15-16 MB memory hole skipping for Write Allocate
 
 **Notes:**
-  - K6INIT detects the memory hole automatically, but this option can be used to force it.
+  - K6INIT usually detects the memory hole by itself, but this option can be used to force it on or off.
 
 ---
 ### `/wo:mode`
@@ -191,11 +215,12 @@ K6INIT offers several command-line options to configure and manage memory settin
 ## Required Build Environment
 
 * MS-DOS 6.xx or 7.xx or Windows 95/98
-* Microsoft C / C++ Compiler Version 7.00
-  * latest patch set required
-  * Also works with Microsoft Visual C++ 1.52. This is not recommended because it is not really meant for pure DOS development.
+* Microsoft C / C++ Compiler Version 7.00 with latest patch set
 
-    In this case you need a 32-Bit DOS Extender such as HX-DOS. The DOSXNT that is included doesn't play nice with my machine sadly.
+  ***or***
+  Microsoft C / C++ 8.00 (comes with Visual C++ 1.52).
+
+  In this case you need a 32-Bit DOS Extender such as HX-DOS or build on a modern windows machine.
 * `LIB` and `INCLUDE` directories from the **DOS Internals** disk bundled with *Geoff Chappell's* excellent book of the same name
     Can be acquired here: https://www.pcjs.org/software/pcx86/sw/books/dos_internals/
 
