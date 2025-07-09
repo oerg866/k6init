@@ -16,6 +16,7 @@
 
 /* This structure holds all the arguments passed to the program. */
 static struct {
+    bool        quiet;
     bool        printBARs;
     /* MTRR Config */
     struct {    bool setup;
@@ -371,6 +372,12 @@ static void k6init_printAppLogoSysInfo(u8 logoColor) {
     };
     util_ApplicationLogo logo = { (const char *)k6initLogoData, LOGO_HEADER_WIDTH, LOGO_HEADER_HEIGHT, 0, VGACON_COLOR_BLACK };
 
+    /* In quiet mode, we don't print anything except for the header */
+    if (s_params.quiet) {
+        printf("%s\n", k6init_versionString);
+        return;
+    }
+
     /* Turbo C won't let me do this assignment in the initialization*/
     logo.fgColor = logoColor;
 
@@ -444,13 +451,10 @@ static bool k6init_doIfSetupAndPrint(bool condition, action function, const char
     if (condition) {
         va_list args;
         bool success = function();
-
-        if (success) vgacon_printOK(""); /* To get the header of the line printed */
-        else         vgacon_printError("");
+        vgacon_LogLevel logLevel = success ? VGACON_LOG_LEVEL_OK : VGACON_LOG_LEVEL_ERROR;
 
         va_start(args, fmt);
-        vprintf(fmt, args);
-        printf("\n");
+        vgacon_vprintfLogLevel(logLevel, fmt, args, true);
         va_end(args);
 
         return success;
@@ -505,6 +509,10 @@ bool k6init_doPrintBARs(void) {
 
     retPrintErrorIf(pci_test() == false, "FATAL: Unable to access PCI bus!", 0);
 
+    if (s_params.quiet) {
+        vgacon_printWarning("/listbars used with /quiet, unmuting the program!\n");
+        vgacon_setLogLevel(VGACON_LOG_LEVEL_INFO);
+    }
     while (NULL != (curDevice = pci_getNextDevice(curDevice))) {
         if (pci_populateDeviceInfo(&curDeviceInfo, *curDevice) == false) {
             vgacon_printWarning("Failed to obtain PCI device info...\n");
@@ -553,6 +561,7 @@ static const args_arg k6init_args[] = {
     ARGS_USAGE("?", "Prints parameter list"),
 
     { "status",     NULL,               "Display current program status.",                      ARG_FLAG,               NULL,                       NULL,                       NULL },
+    { "quiet",      NULL,               "Reduce text output, only print warnings/errors",       ARG_FLAG,               NULL,                       &s_params.quiet,            NULL },
                             ARGS_BLANK,
     { "auto",       NULL,               "Attempt fully automated setup (See above.)",           ARG_FLAG,               NULL,                       NULL,                       k6init_argAutoSetup },
                             ARGS_EXPLAIN("Parts of this procedure can be disabled with these"),
@@ -654,6 +663,9 @@ int main(int argc, char *argv[]) {
     else if (s_sysInfo.thisCPU == UNSUPPORTED_CPU)  { logoColor = VGACON_COLOR_LRED; }
     else if (argErr == ARGS_NO_ARGUMENTS)           { logoColor = VGACON_COLOR_YELLO; }
     else if (argErr != ARGS_SUCCESS)                { logoColor = VGACON_COLOR_BROWN; }
+
+    if (s_params.quiet)
+        vgacon_setLogLevel(VGACON_LOG_LEVEL_WARNING);
 
     k6init_printAppLogoSysInfo(logoColor);
 
