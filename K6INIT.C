@@ -77,12 +77,26 @@ static const char   k6init_versionString[] = "K6INIT Version 1.1 - (C) 2021-2024
 
 #define retPrintErrorIf(condition, message, value) if (condition) { vgacon_printError(message "\n", value); return false; }
 
+static bool k6init_areAllMTRRsUsed(void) {
+    return s_params.mtrr.count >= 2;
+}
+
+static bool k6init_isKnownMTRRAddress(u32 address) {
+    return s_params.mtrr.setup && (address == s_params.mtrr.toSet.configs[0].offset || address == s_params.mtrr.toSet.configs[1].offset);
+}
+
 static bool k6init_addMTRRToConfig(u32 offset, u32 sizeKB, bool writeCombine, bool uncacheable) {
-    retPrintErrorIf(s_params.mtrr.clear == true,    "Cannot clear MTRRs and set them up at the same time!",         0);
-    retPrintErrorIf(s_params.mtrr.count >= 2,       "You are trying to configure too many MTRRs, maximum is 2!",    0);
-    retPrintErrorIf(sizeKB > 0x400000UL,            "Requested MTRR size of %lu KB too big!",                       sizeKB);
-    retPrintErrorIf((offset % 131072UL) != 0UL,     "MTRR offset %lu isn't aligned on a 128KB boundary!",           offset);
-    retPrintErrorIf(sizeKB < 128UL,                 "Requested MTRR size of %lu KB is too small (< 128KB)!",        sizeKB);
+    retPrintErrorIf(s_params.mtrr.clear == true,    "Cannot clear MTRRs and set them up at the same time!",     0);
+    retPrintErrorIf(sizeKB > 0x400000UL,            "Requested MTRR size of %lu KB too big!",                   sizeKB);
+    retPrintErrorIf((offset % 131072UL) != 0UL,     "MTRR offset 0x%lx isn't aligned on a 128KB boundary!",     offset);
+    retPrintErrorIf(sizeKB < 128UL,                 "Requested MTRR size of %lu KB is too small (< 128KB)!",    sizeKB);
+
+    if (k6init_isKnownMTRRAddress(offset)) {
+        vgacon_printWarning("MTRR address 0x%lx already known, ignoring....\n", offset);
+        return true;
+    }
+
+    retPrintErrorIf(k6init_areAllMTRRsUsed(),       "MTRR list is full, cannot add any more!",                  0);
 
     s_params.mtrr.toSet.configs[s_params.mtrr.count].offset         = offset;
     s_params.mtrr.toSet.configs[s_params.mtrr.count].sizeKB         = sizeKB;
@@ -141,7 +155,6 @@ static bool k6init_argSkipWAWO(const void *arg) {
 
 static bool k6init_argClearMTRRs(const void *arg) {
     UNUSED_ARG(arg);
-
     memset(&s_params.mtrr.toSet, 0, sizeof(cpu_K6_MemoryTypeRangeRegs));
     s_params.mtrr.count = 2;
     return true;
@@ -153,13 +166,6 @@ static bool k6init_argAddMTRR(const void *arg) {
 
     retPrintErrorIf(formatOK == false, "MTRR Config Argument Format error.", 0);
     return k6init_addMTRRToConfig(toParse[0], toParse[1], (bool) toParse[2], (bool) toParse[3]);
-}
-
-static bool k6init_isKnownMTRRAddress(u32 address) {
-    if (s_params.mtrr.setup == false)                       return false;
-    if (address == s_params.mtrr.toSet.configs[0].offset)   return true;
-    if (address == s_params.mtrr.toSet.configs[1].offset)   return true;
-    return false;
 }
 
 /* Finds LFB addresses and stuff. */
@@ -176,27 +182,26 @@ bool k6init_findAndAddLFBsToMTRRConfig(void) {
 
     for (i = 0; i < vesa_getModeCount(&s_sysInfo.vesaBiosInfo); i++) {
         retPrintErrorIf(false == vesa_getModeInfoByIndex(&s_sysInfo.vesaBiosInfo, &currentMode, i),
-            "No VESA BIOS found, cannot scan for LFBs!", 0);
+            "Failed to get info for VESA mode 0x%x", i);
 
-        if (currentMode.attributes.hasLFB) {
-            /* Check if the address is already known */
-            if (k6init_isKnownMTRRAddress(currentMode.lfbAddress)) {
-                lfbsFound++;
-                continue;
-            }
-
-            vgacon_print("Found Linear Frame Buffer at: 0x%08lx\n", currentMode.lfbAddress);
-            L866_ASSERTM(lfbsFound < 2, "More than two unique LFB addresses found! Please configure manually!");
-
-            if (false == k6init_addMTRRToConfig(currentMode.lfbAddress, vramSizeKB, true, false)) {
-                return false;
-            }
-
-            lfbsFound++;
+        /* Check if the address has LFB and it is an unknown location */
+        if (!currentMode.attributes.hasLFB || k6init_isKnownMTRRAddress(currentMode.lfbAddress)) {
+            continue;
         }
+
+        if (k6init_areAllMTRRsUsed()) {
+            vgacon_printWarning("MTRR list full, stopping search...\n");
+            break;
+        }
+
+        vgacon_print("Found Linear Frame Buffer at: 0x%08lx\n", currentMode.lfbAddress);
+        lfbsFound++;
+
+        retPrintErrorIf(false == k6init_addMTRRToConfig(currentMode.lfbAddress, vramSizeKB, true, false),
+            "Error adding LFB address to MTRR list!", 0);
     }
 
-    retPrintErrorIf(lfbsFound == 0, "There is a VESA BIOS but no LFB modes were found!", 0);
+    vgacon_printOK("Added %u VESA Frame Buffers to MTRR list.\n", (unsigned) lfbsFound);
     return true;
 }
 
@@ -218,30 +223,30 @@ bool k6init_findAndAddPCIFBsToMTRRConfig(void) {
         vgacon_print("Found Graphics Card, Vendor 0x%04x, Device 0x%04x\n", curDeviceInfo.vendor, curDeviceInfo.device);
 
         for (i = 0; i < PCI_BARS_MAX; i++) {
-            if (curDeviceInfo.bars[i].type != PCI_BAR_MEMORY)   continue; /* Must be memory BAR */
-            if (curDeviceInfo.bars[i].size < 1048576UL)         continue; /* Must be at least 1MB */
+            if (curDeviceInfo.bars[i].type != PCI_BAR_MEMORY)               continue; /* Must be memory BAR */
+            if (curDeviceInfo.bars[i].size < 1048576UL)                     continue; /* Must be at least 1MB */
+            if (k6init_isKnownMTRRAddress(curDeviceInfo.bars[i].address))   continue; /* Must be unknown address */
 
-            /* Check if address is already known */
-            if (k6init_isKnownMTRRAddress(curDeviceInfo.bars[i].address)) {
-                pciFbsFound++;
-                continue;
+            if (k6init_areAllMTRRsUsed()) {
+                vgacon_printWarning("MTRR list full, stopping search...\n");
+                break;
             }
 
             vgacon_print("Found PCI/AGP frame buffer at: 0x%08lx\n", curDeviceInfo.bars[i].address);
+            pciFbsFound++;
 
             if (false == k6init_addMTRRToConfig(curDeviceInfo.bars[i].address, curDeviceInfo.bars[i].size / 1024UL, true, false)) {
+                vgacon_printError("Error adding LFB address to MTRR list!\n");
+                free(curDevice);
                 return false;
             }
-
-            pciFbsFound++;
         }
     }
 
     if (curDevice != NULL)
         free(curDevice);
 
-    retPrintErrorIf(pciFbsFound == 0, "No PCI/AGP Frame Buffers were found!", 0);
-
+    vgacon_printOK("Added %u PCI/AGP Frame Buffers to MTRR list.\n", (unsigned) pciFbsFound);
     return true;
 }
 
@@ -291,7 +296,6 @@ static bool k6init_argSetMulti(const void *arg) {
 
     return true;
 }
-
 
 k6init_SupportedCPU k6init_getSupportedCPUFromCPUID(sys_CPUIDVersionInfo info) {
     if (info.basic.family == 5 && info.basic.model == 8 && info.basic.stepping == 0x0c)
