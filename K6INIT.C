@@ -16,11 +16,12 @@
 
 /* This structure holds all the arguments passed to the program. */
 static struct {
-    bool        autoSetup;
     bool        printBARs;
     /* MTRR Config */
     struct {    bool setup;
                 bool clear;
+                bool pci;
+                bool lfb;
                 size_t count;
                 cpu_K6_MemoryTypeRangeRegs toSet;   } mtrr;
     /* Write Ordering Config */
@@ -92,18 +93,57 @@ static bool k6init_addMTRRToConfig(u32 offset, u32 sizeKB, bool writeCombine, bo
     DBG("k6init_addMTRRToConfig: 0x%08lx | %lu KB | %s | %s\n", offset, sizeKB, writeCombine ? "WC" : "  ", uncacheable ? "UC" : "  ");
 
     s_params.mtrr.count++;
-    s_params.mtrr.setup = true;
+    return true;
+}
 
+static bool k6init_argAutoSetup(const void *arg) {
+    bool cpuHasL2 = (s_sysInfo.thisCPU == K6_III || s_sysInfo.thisCPU == K6_PLUS);
+
+    UNUSED_ARG(arg);
+
+    s_params.wAlloc.setup       = true;
+    s_params.wAlloc.size        = s_sysInfo.memSize / 1024UL;
+    s_params.wAlloc.hole        = s_sysInfo.memHole;
+
+    s_params.wOrder.setup       = true;
+    s_params.wOrder.mode        = CPU_K6_WRITEORDER_ALL_EXCEPT_UC_WC;
+
+    s_params.l1Cache.setup      = true;
+    s_params.l1Cache.enable     = true;
+
+    s_params.l2Cache.setup      = cpuHasL2;
+    s_params.l2Cache.enable     = cpuHasL2;
+
+    s_params.prefetch.setup     = true;
+    s_params.prefetch.enable    = true;
+
+    s_params.mtrr.setup         = true;
+    s_params.mtrr.pci           = true;
+    s_params.mtrr.lfb           = true;
+
+    return true;
+}
+
+static bool k6init_argSkipCPUStuff(const void *arg) {
+    UNUSED_ARG(arg);
+    s_params.l1Cache.setup  = false;
+    s_params.l2Cache.setup  = false;
+    s_params.prefetch.setup = false;
+    return true;
+}
+
+static bool k6init_argSkipWAWO(const void *arg) {
+    UNUSED_ARG(arg);
+    s_params.wAlloc.setup   = false;
+    s_params.wOrder.setup   = false;
     return true;
 }
 
 static bool k6init_argClearMTRRs(const void *arg) {
     UNUSED_ARG(arg);
-    retPrintErrorIf(s_params.mtrr.setup == true, "Cannot clear MTRRs and set them up at the same time!", 0);
 
     memset(&s_params.mtrr.toSet, 0, sizeof(cpu_K6_MemoryTypeRangeRegs));
     s_params.mtrr.count = 2;
-    s_params.mtrr.setup = true;
     return true;
 }
 
@@ -205,19 +245,18 @@ bool k6init_findAndAddPCIFBsToMTRRConfig(void) {
     return true;
 }
 
-static bool k6init_argAddLFBMTRR(const void *arg) {
-    UNUSED_ARG(arg);
-    return k6init_findAndAddLFBsToMTRRConfig();
-}
-
-static bool k6init_argAddPCIMTRR(const void *arg) {
-    UNUSED_ARG(arg);
-    return k6init_findAndAddPCIFBsToMTRRConfig();
-}
-
 static bool k6init_argAddVGAMTRR(const void *arg) {
     UNUSED_ARG(arg);
     return k6init_addMTRRToConfig(0xA0000, 128, true, false);
+}
+
+static bool k6init_argWriteAllocate(const void *arg) {
+    UNUSED_ARG(arg);
+    if (s_params.wAlloc.size == 0) {
+        s_params.wAlloc.size = s_sysInfo.memSize / 1024UL;
+        s_params.wAlloc.hole = s_sysInfo.memHole;
+    }
+    return true;
 }
 
 static bool k6init_argForceWAHole(const void *arg) {
@@ -226,19 +265,20 @@ static bool k6init_argForceWAHole(const void *arg) {
     return true;
 }
 
+static bool k6init_argSetL2(const void *arg) {
+    UNUSED_ARG(arg);
+    retPrintErrorIf(s_sysInfo.thisCPU != K6_III && s_sysInfo.thisCPU != K6_PLUS, "Can't set L2; this CPU doesn't have on-die L2 cache.", 0);
+    return true;
+}
+
 static bool k6init_argWriteOrder(const void *arg) {
+    UNUSED_ARG(arg);
     retPrintErrorIf(s_params.wOrder.mode >= (u8) __CPU_K6_WRITEORDER_MODE_COUNT__,
         "Value %u for Write Order Mode out of range!\n", s_params.wOrder.mode);
-    UNUSED_ARG(arg);
-    return s_params.wOrder.setup = true;
+    return true;
 }
 
-static bool k6init_argWriteAllocate(const void *arg) {
-    UNUSED_ARG(arg);
-    return s_params.wAlloc.setup = true;
-}
-
-static bool k6init_argAddMulti(const void *arg) {
+static bool k6init_argSetMulti(const void *arg) {
     bool formatOK =     (isdigit(s_multiToParse[0]))
                     &&  (s_multiToParse[1] == '.' && s_multiToParse[3] == 0x00)
                     &&  (s_multiToParse[2] == '5' || s_multiToParse[2] == '0');
@@ -248,25 +288,10 @@ static bool k6init_argAddMulti(const void *arg) {
 
     s_params.multi.integer = (u8) (s_multiToParse[0] - '0');
     s_params.multi.decimal = (u8) (s_multiToParse[2] - '0');
-    s_params.multi.setup   = true;
 
     return true;
 }
 
-static bool k6init_argAddL1(const void *arg) {
-    UNUSED_ARG(arg);
-    return s_params.l1Cache.setup = true;
-}
-
-static bool k6init_argAddL2(const void *arg) {
-    UNUSED_ARG(arg);
-    return s_params.l2Cache.setup = true;
-}
-
-static bool k6init_argAddPrefetch(const void *arg) {
-    UNUSED_ARG(arg);
-    return s_params.prefetch.setup = true;
-}
 
 k6init_SupportedCPU k6init_getSupportedCPUFromCPUID(sys_CPUIDVersionInfo info) {
     if (info.basic.family == 5 && info.basic.model == 8 && info.basic.stepping == 0x0c)
@@ -430,7 +455,10 @@ static bool k6init_doIfSetupAndPrint(bool condition, action function, const char
 }
 
 static bool k6init_doMTRRCfg(void) {
-    bool success = cpu_K6_setMemoryTypeRanges(&s_params.mtrr.toSet);
+    bool success = true;
+    if (s_params.mtrr.pci) success &= k6init_findAndAddPCIFBsToMTRRConfig();
+    if (s_params.mtrr.lfb) success &= k6init_findAndAddLFBsToMTRRConfig();
+    success &= cpu_K6_setMemoryTypeRanges(&s_params.mtrr.toSet);
     k6init_printCompactMTRRConfigs("New MTRR setup: ", true);
     return success;
 }
@@ -491,31 +519,7 @@ bool k6init_doPrintBARs(void) {
                     curDeviceInfo.bars[i].size / 1024UL);
         }
     }
-    return true;
-}
 
-static bool k6init_autoSetup(void) {
-    bool cpuHasL2 = (s_sysInfo.thisCPU == K6_III || s_sysInfo.thisCPU == K6_PLUS);
-
-    s_params.wAlloc.setup      = (s_sysInfo.memSize > 0);
-    s_params.wAlloc.size       = s_sysInfo.memSize / 1024UL;
-    s_params.wAlloc.hole       = s_sysInfo.memHole;
-
-    s_params.wOrder.setup      = true;
-    s_params.wOrder.mode       = CPU_K6_WRITEORDER_ALL_EXCEPT_UC_WC;
-
-    s_params.l1Cache.setup     = true;
-    s_params.l1Cache.enable    = true;
-
-    s_params.l2Cache.setup     = cpuHasL2;
-    s_params.l2Cache.enable    = true;
-
-    s_params.prefetch.setup    = true;
-    s_params.prefetch.enable   = true;
-
-    retPrintErrorIf(k6init_findAndAddPCIFBsToMTRRConfig() == false, "PCI/AGP FB detection failed! Skipping...", 0);
-    retPrintErrorIf(k6init_findAndAddLFBsToMTRRConfig() == false,   "LFB detection failed! Skipping...", 0);
-    retPrintErrorIf(s_params.wAlloc.setup == false,                 "Memory detection failed! Skipping Write Allocate.", 0);
     return true;
 }
 
@@ -530,73 +534,94 @@ static const char k6init_appDescription[] =
     "even with an extended memory manager (such as EMM386) installed.\n"
     "\n"
     "If called with the /auto parameter, it does the following:\n"
-    "- Finds linear frame buffer memory and sets up write combining for it\n"
+    "- Finds linear frame buffer memory regions using PCI/AGP and VESA methods,\n"
+    "  then sets up write combining for them\n"
     "- Enables Write Allocate for the entire system memory range\n"
     "- Enables Write Ordering except for uncacheable / write-combined regions\n"
     "\n"
-    "This can be altered and overridden with many command line parameters.\n"
+    "/auto is equivalent to '/pci /lfb /wa:0 /wo:1 /l1:1 /l2:1 /prefetch:1'\n"
     "\n"
-    "K6INIT was built using:\n"
-    "LIB866D DOS Real-Mode Software Development Library\n"
+    "K6INIT was built with the LIB866D DOS Real-Mode Software Development Library\n"
     "http://github.com/oerg866/lib866d\n";
 
 static const args_arg k6init_args[] = {
     ARGS_HEADER(k6init_versionString, k6init_appDescription),
     ARGS_USAGE("?", "Prints parameter list"),
 
-    { "status",     NULL,               "Display current program status.",                      ARG_FLAG,               NULL,                       NULL },
+    { "status",     NULL,               "Display current program status.",                      ARG_FLAG,               NULL,                       NULL,                       NULL },
+                            ARGS_BLANK,
+    { "auto",       NULL,               "Attempt fully automated setup (See above.)",           ARG_FLAG,               NULL,                       NULL,                       k6init_argAutoSetup },
+                            ARGS_EXPLAIN("Parts of this procedure can be disabled with these"),
+                            ARGS_EXPLAIN("four arguments (with '/auto' being the first):"),
 
-    { "auto",       NULL,               "Fully automated setup (See above.)",                   ARG_FLAG,               &s_params.autoSetup,        NULL },
+    { "skippci",    NULL,               "Skip PCI/AGP Frame Buffer Detection & MTRR Setup",     ARG_NFLAG,              NULL,                       &s_params.mtrr.pci,         NULL },
+    { "skiplfb",    NULL,               "Skip VESA Linear Frame Buffer Detection & MTRR Setup", ARG_NFLAG,              NULL,                       &s_params.mtrr.lfb,         NULL },
+    { "skipcpu",    NULL,               "Skip CPU internals setup (Cache, Prefetch)",           ARG_FLAG,               NULL,                       NULL,                       k6init_argSkipCPUStuff },
+    { "skipwawo",   NULL,               "Skip Write Allocate / Order setup",                    ARG_FLAG,               NULL,                       NULL,                       k6init_argSkipWAWO },
+                            ARGS_BLANK,
 
-    { "mtrr",       "offset,size,wc,uc","Enable Write Combining for given range",               ARG_ARRAY(ARG_U32, 4),  s_MTRRCfgQueue,             k6init_argAddMTRR },
+    { "mtrr",       "offset,size,wc,uc","Configure MTRR manually (e.g. to set write combine)",  ARG_ARRAY(ARG_U32, 4),  &s_params.mtrr.setup,       s_MTRRCfgQueue,             k6init_argAddMTRR },
                             ARGS_EXPLAIN("offset: linear offset (e.g. 0xE0000000)"),
                             ARGS_EXPLAIN("size:   length in KILOBYTES (e.g. 8192)"),
                             ARGS_EXPLAIN("wc:     '1': Region is write-combine"),
                             ARGS_EXPLAIN("uc:     '1': Region is uncacheable"),
                             ARGS_EXPLAIN("NOTE - /mtrr can be be used twice."),
-                            ARGS_EXPLAIN("NOTE - Will discard any MTRRs configured before"),
+                            ARGS_EXPLAIN("NOTE - Will discard any MTRRs configured before"),    /* This is a side effect of ignoring previous MTRR config when setting MTRR*/
                             ARGS_EXPLAIN("running this program."),
 
-    { "lfb",        NULL,               "Find and enable Write Combine for Linear Frame Buffer",ARG_FLAG,               NULL,                       k6init_argAddLFBMTRR },
+    { "mtrrclr",    NULL,               "Clear Memory Type Range Registers",                    ARG_FLAG,               &s_params.mtrr.setup,       NULL,                       k6init_argClearMTRRs },
+                            ARGS_EXPLAIN("Clears any MTRRs, effectively disabling any"),
+                            ARGS_EXPLAIN("Write-Combine and Uncacheable regions."),
 
-    { "pci",        NULL,               "Find and enable Write Combine for Frame Buffers",      ARG_FLAG,               NULL,                       k6init_argAddPCIMTRR },
+    { "lfb",        NULL,               "Find and enable Write Combine for Linear Frame Buffer",ARG_FLAG,               &s_params.mtrr.setup,       &s_params.mtrr.lfb,         NULL },
+
+    { "pci",        NULL,               "Find and enable Write Combine for Frame Buffers",      ARG_FLAG,               &s_params.mtrr.setup,       &s_params.mtrr.pci,         NULL },
                             ARGS_EXPLAIN("exposed by PCI/AGP cards (experimental)"),
+                            ARGS_EXPLAIN("NOTE: Known to cause problems in Windows 9x with"),
+                            ARGS_EXPLAIN("some cards."),
 
-    { "vga",        NULL,               "Enables Write Combine for the VGA memory region",      ARG_FLAG,               NULL,                       k6init_argAddVGAMTRR },
+    { "vga",        NULL,               "Enables Write Combine for the VGA memory region",      ARG_FLAG,               &s_params.mtrr.setup,       NULL,                       k6init_argAddVGAMTRR },
                             ARGS_EXPLAIN("(A0000-BFFFF). WARNING: Potentially unsafe."),
                             ARGS_EXPLAIN("You MUST NOT use this memory region for UMBs."),
                             ARGS_EXPLAIN("This parameter is equivalent to /wc:0xA0000,128,1,0"),
 
-    { "nomtrr",     NULL,               "Disables Memory Type Range Registers completely",      ARG_FLAG,               NULL,                       k6init_argClearMTRRs },
-                            ARGS_EXPLAIN("Clears any MTRRs, including Write-Combine and"),
-                            ARGS_EXPLAIN("Uncacheable regions."),
+    ARGS_BLANK,
 
-    { "wa",         "size",             "Configure Write Allocate",                             ARG_U32,                &s_params.wAlloc.size,      k6init_argWriteAllocate },
+    { "wa",         "size",             "Configure Write Allocate manually",                    ARG_U32,                &s_params.wAlloc.setup,     &s_params.wAlloc.size,      k6init_argWriteAllocate },
                             ARGS_EXPLAIN("size: Memory size in KB"),
-                            ARGS_EXPLAIN("Set this to 0 to disable Write Allocate completely."),
+                            ARGS_EXPLAIN("Set this to 0 to auto-detect size + 15-16M Hole."),
 
-    { "wahole",     NULL,               "Force 15-16M Memory Hole Skipping for Write Allocate", ARG_FLAG,               &s_params.wAlloc.hole,      k6init_argForceWAHole },
-                            ARGS_EXPLAIN("K6INIT detects the memory hole automatically,"),
-                            ARGS_EXPLAIN("but you can use this parameter to force it."),
+    { "wahole",     "1/0",              "Force 15-16M Memory Hole for Write Allocate",          ARG_FLAG,               NULL,                       &s_params.wAlloc.hole,      NULL },
+                            ARGS_EXPLAIN("K6INIT usually detects the hole by itself,"),
+                            ARGS_EXPLAIN("but you can use this parameter to force it on/off."),
+                            ARGS_EXPLAIN("(needs /auto or /wa to be effective)"),
 
-    { "wo",         "mode",             "Configure Write Order Mode",                           ARG_U8,                 &s_params.wOrder.mode,      k6init_argWriteOrder },
-                            ARGS_EXPLAIN("mode is a single digit to indicate the mode:"),
+    ARGS_BLANK,
+
+    { "wo",         "mode",             "Configure Write Order Mode",                           ARG_U8,                 &s_params.wOrder.setup,     &s_params.wOrder.mode,      k6init_argWriteOrder },
+                            ARGS_EXPLAIN("mode: a single digit indicating the WO mode:"),
                             ARGS_EXPLAIN("0 - All Memory Regions (Slow)"),
                             ARGS_EXPLAIN("1 - All except Uncacheable/Write-Combined (Fast)"),
                             ARGS_EXPLAIN("2 - No Memory Regions (Fastest)"),
 
-    { "multi",      "x.y",              "Configure CPU Frequency Multiplier",                   ARG_STRING(3),          s_multiToParse,             k6init_argAddMulti },
+    ARGS_BLANK,
+
+    { "multi",      "x.y",              "Configure CPU Frequency Multiplier",                   ARG_STRING(3),          &s_params.multi.setup,      s_multiToParse,             k6init_argSetMulti },
                             ARGS_EXPLAIN("x: integral part of multiplier"),
                             ARGS_EXPLAIN("y: fractional part of multiplier"),
                             ARGS_EXPLAIN("IMPORTANT: Requires K6-2+ or K6-III+ CPU!"),
                             ARGS_EXPLAIN("Example: /multi:5.5"),
 
-    { "l1",         "1/0",              "Enable/Disable Level 1 cache",                         ARG_BOOL,               &s_params.l1Cache.enable,   k6init_argAddL1 },
-    { "l2",         "1/0",              "Enable/Disable Level 2 cache",                         ARG_BOOL,               &s_params.l2Cache.enable,   k6init_argAddL2 },
-                            ARGS_EXPLAIN("NOTE: Only K6-2+ and K6-III+ have on-die L2 Cache!"),
-    { "prefetch",   "1/0",              "Enable/Disable Data Prefetch",                         ARG_BOOL,               &s_params.prefetch.enable,  k6init_argAddPrefetch },
+    ARGS_BLANK,
 
-    { "listbars",   NULL,               "List all PCI/AGP device Base Address Regions (BARs)",  ARG_FLAG,               &s_params.printBARs,        NULL },
+    { "l1",         "1/0",              "Enable/Disable Level 1 cache",                         ARG_BOOL,               &s_params.l1Cache.setup,    &s_params.l1Cache.enable,   NULL },
+    { "l2",         "1/0",              "Enable/Disable Level 2 cache",                         ARG_BOOL,               &s_params.l2Cache.setup,    &s_params.l2Cache.enable,   k6init_argSetL2 },
+                            ARGS_EXPLAIN("NOTE: Only K6-2+ and K6-III+ have on-die L2 Cache!"),
+    { "prefetch",   "1/0",              "Enable/Disable Data Prefetch",                         ARG_BOOL,               &s_params.prefetch.setup,   &s_params.prefetch.enable,  NULL },
+
+    ARGS_BLANK,
+
+    { "listbars",   NULL,               "List all PCI/AGP device Base Address Regions (BARs)",  ARG_FLAG,               NULL,                       &s_params.printBARs,        NULL },
 };
 
 int main(int argc, char *argv[]) {
@@ -643,7 +668,6 @@ int main(int argc, char *argv[]) {
 
     /* Do actual execution of requested actions */
     ok &= k6init_doIfSetupAndPrint(s_params.printBARs,      k6init_doPrintBARs,     "Print PCI/AGP device BARs");
-    ok &= k6init_doIfSetupAndPrint(s_params.autoSetup,      k6init_autoSetup,       "Preparing automatic configuration");
     ok &= k6init_doIfSetupAndPrint(s_params.mtrr.setup,     k6init_doMTRRCfg,       "Set MTRR Config");
     ok &= k6init_doIfSetupAndPrint(s_params.wAlloc.setup,   k6init_doWriteAllocCfg, "Set Write Allocate Config (%lu KB)",
                                                                                         s_params.wAlloc.size);
