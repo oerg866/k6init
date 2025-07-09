@@ -513,6 +513,7 @@ bool k6init_doPrintBARs(void) {
         vgacon_printWarning("/listbars used with /quiet, unmuting the program!\n");
         vgacon_setLogLevel(VGACON_LOG_LEVEL_INFO);
     }
+
     while (NULL != (curDevice = pci_getNextDevice(curDevice))) {
         if (pci_populateDeviceInfo(&curDeviceInfo, *curDevice) == false) {
             vgacon_printWarning("Failed to obtain PCI device info...\n");
@@ -645,6 +646,13 @@ int main(int argc, char *argv[]) {
     u8              logoColor = VGACON_COLOR_GREEN;
     bool            ok = true;
 
+    /* V86 mode is a no-no! */
+    if (sys_cpuIsInV86Mode()) {
+        vgacon_printError("K6INIT can't run in V86 mode!\n");
+        vgacon_print("Hint: Load it in CONFIG.SYS before memory managers!\n");
+        vgacon_print("Example: DEVICE=K6INIT.EXE /auto\n");
+        return -1;
+    }
 
     /* Privileged instructions cause GPFs on WINDOWS, so we exit. */
     if (sys_getWindowsMode() != OS_PURE_DOS) {
