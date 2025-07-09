@@ -606,7 +606,7 @@ static const args_arg k6init_args[] = {
                             ARGS_EXPLAIN("size: Memory size in KB"),
                             ARGS_EXPLAIN("Set this to 0 to auto-detect size + 15-16M Hole."),
 
-    { "wahole",     "1/0",              "Force 15-16M Memory Hole for Write Allocate",          ARG_FLAG,               NULL,                       &s_params.wAlloc.hole,      NULL },
+    { "wahole",     "1/0",              "Force 15-16M Memory Hole for Write Allocate",          ARG_BOOL,               NULL,                       &s_params.wAlloc.hole,      NULL },
                             ARGS_EXPLAIN("K6INIT usually detects the hole by itself,"),
                             ARGS_EXPLAIN("but you can use this parameter to force it on/off."),
                             ARGS_EXPLAIN("(needs /auto or /wa to be effective)"),
