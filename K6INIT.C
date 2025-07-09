@@ -342,6 +342,10 @@ static void k6init_populateSysInfo(void) {
 
 static void k6init_printCompactMTRRConfigs(const char *optionalTag, bool newLine) {
     size_t i;
+
+    if (s_params.quiet)
+        return;
+
     cpu_K6_getMemoryTypeRanges(&s_sysInfo.mtrrs); /* Update known MTRRs */
 
     if (optionalTag != NULL)
