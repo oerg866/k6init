@@ -40,6 +40,10 @@ This can be altered and overridden with many command line parameters.
 - [x] Give precise control over **Memory Type Range Registers (MTRRs)** including **Write-Combine** and **Uncacheable** modes.
 - [x] Set MTRR to enable Write combining for PCI/AGP BAR Frame Buffers automatically
 - [x] Set MTRR to enable Write combining for Linear Frame Buffers (LFBs) automatically (requires graphics card with VESA BIOS extensions)
+- [x] Enable chipset-internal Frame Buffer write cycle acceleration
+
+  Supported chipsets:
+  - ALI Aladdin V (M1541 northbridge)
 - [x] Set Write allocate for system memory
 - [x] Set Write Order mode
 - [x] Set Frequency Multiplier (K6-2+/III+ only)
@@ -112,6 +116,15 @@ Parts of this procedure can be disabled with the following `/skip` parameters.
 **Description:** Skip Write Allocate / Order setup
 
 The above `/skip` parameters should be used with /auto preceding them.
+
+---
+### `/chipset`
+**Description:** Apply chipset-specific tweaks
+
+***WARNING:*** Highly experimental feature!
+
+Some chipsets support acceleration of frame buffer write cycles, which K6INIT can leverage.
+See above for supported chipsets.
 
 ---
 ### `/mtrr:offset,size,wc,uc`

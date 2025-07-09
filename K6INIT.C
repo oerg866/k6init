@@ -3,6 +3,8 @@
 #include <string.h>
 #include <ctype.h>
 
+#include "k6init.h"
+
 #include "vesabios.h"
 #include "vgacon.h"
 #include "util.h"
@@ -14,70 +16,12 @@
 #define __LIB866D_TAG__ "K6INIT"
 #include "debug.h"
 
-/* This structure holds all the arguments passed to the program. */
-static struct {
-    bool        quiet;
-    bool        printBARs;
-    /* MTRR Config */
-    struct {    bool setup;
-                bool clear;
-                bool pci;
-                bool lfb;
-                size_t count;
-                cpu_K6_MemoryTypeRangeRegs toSet;   } mtrr;
-    /* Write Ordering Config */
-    struct {    bool setup;
-                u8 mode;                            } wOrder;
-    /* Write Allocate Config */
-    struct {    bool setup;
-                bool hole;
-                u32 size;                           } wAlloc;
-    /* Multiplier Config */
-    struct {    bool setup;
-                u8 integer;
-                u8 decimal;                         } multi;
-    /* L1 Cache Config */
-    struct {    bool setup;
-                bool enable;                        } l1Cache;
-    /* L2 Cache Config */
-    struct {    bool setup;
-                bool enable;                        } l2Cache;
-    /* Data Prefetch Config */
-    struct {    bool setup;
-                bool enable;                        } prefetch;
-
-} s_params;
-
-typedef enum {
-    K6_2_CXT = 0,
-    K6_III,
-    K6_PLUS,
-    UNSUPPORTED_CPU
-} k6init_SupportedCPU;
-
-/* This structure holds all the detected system info we may need for this program. */
-static struct {
-    sys_CPUIDVersionInfo        cpuidInfo;
-    sys_CPUManufacturer         cpuManufacturer;
-    char                        cpuidString[13];
-    k6init_SupportedCPU         thisCPU;
-    cpu_K6_MemoryTypeRangeRegs  mtrrs;
-    cpu_K6_WriteAllocateConfig  whcr;
-    u32                         memSize;
-    bool                        memHole;
-    bool                        vesaBIOSPresent;
-    vesa_BiosInfo               vesaBiosInfo;
-    bool                        L1CacheEnabled;
-    bool                        L2CacheEnabled;
-    bool                        criticalError;
-} s_sysInfo;
-
-static char         s_multiToParse[4] = {0,};
-static u32          s_MTRRCfgQueue[4];
+static k6init_Parameters    s_params;
+static k6init_SysInfo       s_sysInfo;
+static char                 s_multiToParse[4] = {0,};
+static u32                  s_MTRRCfgQueue[4];
 
 static const char   k6init_versionString[] = "K6INIT Version 1.2 - (C) 2021-2025 Eric Voirin (oerg866)";
-
-#define retPrintErrorIf(condition, message, value) if (condition) { vgacon_printError(message "\n", value); return false; }
 
 static bool k6init_areAllMTRRsUsed(void) {
     return s_params.mtrr.count >= 2;
@@ -476,6 +420,10 @@ static bool k6init_doMTRRCfg(void) {
     return success;
 }
 
+static bool k6init_doChipsetTweaks(void) {
+    return chipset_autoConfig(&s_params, &s_sysInfo);
+}
+
 static bool k6init_doWriteAllocCfg(void) {
     return cpu_K6_setWriteAllocateRangeValues(s_params.wAlloc.size, s_params.wAlloc.hole);
 }
@@ -578,7 +526,13 @@ static const args_arg k6init_args[] = {
     { "skipcpu",    NULL,               "Skip CPU internals setup (Cache, Prefetch)",           ARG_FLAG,               NULL,                       NULL,                       k6init_argSkipCPUStuff },
     { "skipwawo",   NULL,               "Skip Write Allocate / Order setup",                    ARG_FLAG,               NULL,                       NULL,                       k6init_argSkipWAWO },
                             ARGS_BLANK,
-
+    { "chipset",    NULL,               "Apply chipset-specific tweaks (EXPERIMENTAL!!)",       ARG_FLAG,               NULL,                       &s_params.chipsetTweaks,    NULL },
+                            ARGS_EXPLAIN("WARNING: Highly experimental feature!"),
+                            ARGS_EXPLAIN("Some chipsets support acceleration of Frame Buffer"),
+                            ARGS_EXPLAIN("write cycles, which K6INIT can leverage."),
+                            ARGS_EXPLAIN("Supported chipsets:"),
+                            ARGS_EXPLAIN("  - ALI ALADDIN V (e.g. ASUS P5A)"),
+                            ARGS_BLANK,
     { "mtrr",       "offset,size,wc,uc","Configure MTRR manually (e.g. to set write combine)",  ARG_ARRAY(ARG_U32, 4),  &s_params.mtrr.setup,       s_MTRRCfgQueue,             k6init_argAddMTRR },
                             ARGS_EXPLAIN("offset: linear offset (e.g. 0xE0000000)"),
                             ARGS_EXPLAIN("size:   length in KILOBYTES (e.g. 8192)"),
@@ -698,6 +652,7 @@ int main(int argc, char *argv[]) {
     /* Do actual execution of requested actions */
     ok &= k6init_doIfSetupAndPrint(s_params.printBARs,      k6init_doPrintBARs,     "Print PCI/AGP device BARs");
     ok &= k6init_doIfSetupAndPrint(s_params.mtrr.setup,     k6init_doMTRRCfg,       "Set MTRR Config");
+    ok &= k6init_doIfSetupAndPrint(s_params.chipsetTweaks,  k6init_doChipsetTweaks, "Set Chipset Tweaks");
     ok &= k6init_doIfSetupAndPrint(s_params.wAlloc.setup,   k6init_doWriteAllocCfg, "Set Write Allocate Config (%lu KB)",
                                                                                         s_params.wAlloc.size);
     ok &= k6init_doIfSetupAndPrint(s_params.wOrder.setup,   k6init_doWriteOrderCfg, "Set Write Order Mode (%s)",
@@ -715,3 +670,4 @@ int main(int argc, char *argv[]) {
 
     return (ok == true) ? 0 : -1;
 }
+
