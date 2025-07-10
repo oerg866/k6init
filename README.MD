@@ -40,10 +40,12 @@ This can be altered and overridden with many command line parameters.
 - [x] Give precise control over **Memory Type Range Registers (MTRRs)** including **Write-Combine** and **Uncacheable** modes.
 - [x] Set MTRR to enable Write combining for PCI/AGP BAR Frame Buffers automatically
 - [x] Set MTRR to enable Write combining for Linear Frame Buffers (LFBs) automatically (requires graphics card with VESA BIOS extensions)
-- [x] Enable chipset-internal Frame Buffer write cycle acceleration
+- [x] Enable chipset-internal Frame Buffer write cycle acceleration ***(EXPERIMENTAL!!!!)***
 
   Supported chipsets:
-  - ALI Aladdin V (M1541 northbridge)
+  - ALi Aladdin III, IV, V
+  - SiS 5571, 5581, 5591
+  - SiS 530, 540
 - [x] Set Write allocate for system memory
 - [x] Set Write Order mode
 - [x] Set Frequency Multiplier (K6-2+/III+ only)
