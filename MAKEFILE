@@ -2,7 +2,7 @@
 
 CC  = cl
 LINK = link
-CFLAGS = /c /Ox /WX /nologo /ILIB866D
+CFLAGS = /c /Ox /WX /nologo /ILIB866D /DASSERT_ENABLE
 DEBUG = 0
 
 !IF $(DEBUG)
