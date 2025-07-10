@@ -413,8 +413,8 @@ static bool k6init_doIfSetupAndPrint(bool condition, action function, const char
 
 static bool k6init_doMTRRCfg(void) {
     bool success = true;
-    if (s_params.mtrr.pci) success &= k6init_findAndAddPCIFBsToMTRRConfig();
     if (s_params.mtrr.lfb) success &= k6init_findAndAddLFBsToMTRRConfig();
+    if (s_params.mtrr.pci) success &= k6init_findAndAddPCIFBsToMTRRConfig();
     success &= cpu_K6_setMemoryTypeRanges(&s_params.mtrr.toSet);
     k6init_printCompactMTRRConfigs("New MTRR setup: ", true);
     return success;
