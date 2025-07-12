@@ -44,7 +44,7 @@ This can be altered and overridden with many command line parameters.
 
   Supported chipsets:
   - ALi Aladdin III, IV, V
-  - SiS 5571, 5581, 5591
+  - SiS 5571, 5581, 5591, 5597
   - SiS 530, 540
 - [x] Set Write allocate for system memory
 - [x] Set Write Order mode

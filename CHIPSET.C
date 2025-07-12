@@ -248,7 +248,7 @@ static void sisWrite530Regs(u32 offset, u32 sizeKB, pci_Device pciDev) {
 }
 
 
-/*  SiS 5581, 5591, 5597 chipset tweaks
+/*  SiS 557, 5581, 5591, 5597 chipset tweaks
     5591 calls it PCI Fast back to back frame buffer
     5597 and 5581 generically call it "fast back to back area"
     registers are the same though. */

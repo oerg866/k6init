@@ -532,7 +532,7 @@ static const args_arg k6init_args[] = {
                             ARGS_EXPLAIN("write cycles, which K6INIT can leverage."),
                             ARGS_EXPLAIN("Supported chipsets:"),
                             ARGS_EXPLAIN("  - ALi ALADDIN III, IV, V"),
-                            ARGS_EXPLAIN("  - SiS 5571, 5581, 5591"),
+                            ARGS_EXPLAIN("  - SiS 5571, 5581, 5591, 5597"),
                             ARGS_EXPLAIN("  - SiS 530, 540"),
                             ARGS_BLANK,
     { "mtrr",       "offset,size,wc,uc","Configure MTRR manually (e.g. to set write combine)",  ARG_ARRAY(ARG_U32, 4),  &s_params.mtrr.setup,       s_MTRRCfgQueue,             k6init_argAddMTRR },
