@@ -21,7 +21,7 @@ static k6init_SysInfo       s_sysInfo;
 static char                 s_multiToParse[4] = {0,};
 static u32                  s_MTRRCfgQueue[4];
 
-static const char   k6init_versionString[] = "K6INIT Version 1.3 BETA - (C) 2021-2025 Eric Voirin (oerg866)";
+static const char   k6init_versionString[] = "K6INIT Version 1.3 - (C) 2021-2025 Eric Voirin (oerg866)";
 
 static bool k6init_areAllMTRRsUsed(void) {
     return s_params.mtrr.count >= 2;
