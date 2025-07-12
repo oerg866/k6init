@@ -285,6 +285,7 @@ static const chipset_KnownChipset chipset_knownChipsets[] = {
     { 0x1039, 0x5571, "SiS 5571",           chipset_sis559x },
     { 0x1039, 0x5581, "SiS 5581/5582",      chipset_sis559x },
     { 0x1039, 0x5591, "SiS 5591/5592",      chipset_sis559x },
+    { 0x1039, 0x5597, "SiS 5597/5598",      chipset_sis559x },
     { 0x1039, 0x0001, "SiS 530/540",        chipset_sis5x0 },
 };
 
