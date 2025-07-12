@@ -214,7 +214,7 @@ static void sisWrite5591Regs(u32 offset, u32 sizeKB, pci_Device pciDev) {
     } fbSizeReg;
 
     /* PCI bridge parameters register must retain the irrelevant values */
-    pci_readBytes(pciDev, &cpuPciCharacteristicsReg, 0x82, 1);
+    pci_readBytes(pciDev, &cpuPciCharacteristicsReg, 0x83, 1);
 
     cpuPciCharacteristicsReg.fastBackToBack = true;
 
@@ -226,7 +226,7 @@ static void sisWrite5591Regs(u32 offset, u32 sizeKB, pci_Device pciDev) {
 
     pci_writeBytes(pciDev, &fbBaseReg, 0x88, 2);
     pci_writeBytes(pciDev, &fbSizeReg, 0x8A, 2);
-    pci_writeBytes(pciDev, &cpuPciCharacteristicsReg, 0x82, 1);
+    pci_writeBytes(pciDev, &cpuPciCharacteristicsReg, 0x83, 1);
 }
 
 
