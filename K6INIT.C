@@ -21,7 +21,7 @@ static k6init_SysInfo       s_sysInfo;
 static char                 s_multiToParse[4] = {0,};
 static u32                  s_MTRRCfgQueue[4];
 
-static const char   k6init_versionString[] = "K6INIT Version 1.3b - (C) 2021-2025 Eric Voirin (oerg866)";
+static const char   k6init_versionString[] = "K6INIT Version 1.4 - (C) 2021-2026 Eric Voirin (oerg866)";
 
 static bool k6init_areAllMTRRsUsed(void) {
     return s_params.mtrr.count >= 2;
@@ -57,27 +57,25 @@ static bool k6init_addMTRRToConfig(u32 offset, u32 sizeKB, bool writeCombine, bo
 }
 
 static bool k6init_argAutoSetup(const void *arg) {
-    bool cpuHasL2 = (s_sysInfo.thisCPU == K6_III || s_sysInfo.thisCPU == K6_PLUS);
-
     UNUSED_ARG(arg);
 
     s_params.wAlloc.setup       = true;
     s_params.wAlloc.size        = s_sysInfo.memSize / 1024UL;
     s_params.wAlloc.hole        = s_sysInfo.memHole;
 
-    s_params.wOrder.setup       = true;
+    s_params.wOrder.setup       = s_sysInfo.cpu.supportsCxtFeatures;
     s_params.wOrder.mode        = CPU_K6_WRITEORDER_ALL_EXCEPT_UC_WC;
 
     s_params.l1Cache.setup      = true;
     s_params.l1Cache.enable     = true;
 
-    s_params.l2Cache.setup      = cpuHasL2;
-    s_params.l2Cache.enable     = cpuHasL2;
+    s_params.l2Cache.setup      = s_sysInfo.cpu.supportsL2;
+    s_params.l2Cache.enable     = s_sysInfo.cpu.supportsL2;
 
     s_params.prefetch.setup     = true;
     s_params.prefetch.enable    = true;
 
-    s_params.mtrr.setup         = true;
+    s_params.mtrr.setup         = s_sysInfo.cpu.supportsCxtFeatures;
     s_params.mtrr.pci           = true;
     s_params.mtrr.lfb           = true;
 
@@ -218,12 +216,13 @@ static bool k6init_argForceWAHole(const void *arg) {
 
 static bool k6init_argSetL2(const void *arg) {
     UNUSED_ARG(arg);
-    retPrintErrorIf(s_sysInfo.thisCPU != K6_III && s_sysInfo.thisCPU != K6_PLUS, "Can't set L2; this CPU doesn't have on-die L2 cache.", 0);
+    retPrintErrorIf(!s_sysInfo.cpu.supportsL2, "Can't set L2; this CPU doesn't have on-die L2 cache.", 0);
     return true;
 }
 
 static bool k6init_argWriteOrder(const void *arg) {
     UNUSED_ARG(arg);
+    retPrintErrorIf(!s_sysInfo.cpu.supportsCxtFeatures, "This CPU doesn't support write ordering.", 0);
     retPrintErrorIf(s_params.wOrder.mode >= (u8) __CPU_K6_WRITEORDER_MODE_COUNT__,
         "Value %u for Write Order Mode out of range!\n", s_params.wOrder.mode);
     return true;
@@ -243,44 +242,54 @@ static bool k6init_argSetMulti(const void *arg) {
     return true;
 }
 
-k6init_SupportedCPU k6init_getSupportedCPUFromCPUID(sys_CPUIDVersionInfo info) {
-    if (info.basic.family == 5 && info.basic.model == 8 && info.basic.stepping == 0x0c)
-        return K6_2_CXT;
-    if (info.basic.family == 5 && info.basic.model == 9)
-        return K6_III;
-    if (info.basic.family == 5 && info.basic.model == 0x0d)
-        return K6_PLUS;
+void k6init_populateCPUInfo() {
+    static const k6init_CPUCaps supportedCPUs[] = {
+        /* Type             Name                    >=CXT   L2      Multiplier */
+        { K6,               "AMD K6",               false,  false,  false },
+        { K6_2,             "AMD K6-2",             false,  false,  false },
+        { K6_2_CXT,         "AMD K6-2 CXT",         true,   false,  false },
+        { K6_III,           "AMD K6-III",           true,   true,   false },
+        { K6_PLUS,          "AMD K6-2+/III+",       true,   true,   true  },
+        { UNSUPPORTED_CPU,  "<UNSUPPORTED CPU>",    false,  false,  false },
+    };
 
-    return UNSUPPORTED_CPU;
-};
+    sys_CPUIDVersionInfo info   = sys_getCPUIDVersionInfo();
+    u16 model                   = info.basic.model;
+    u16 stepping                = info.basic.stepping;
 
-static const char *k6init_getK6CPUString(k6init_SupportedCPU cpu) {
-    if (cpu == K6_2_CXT)    return "AMD K6-2 CXT";
-    if (cpu == K6_III)      return "AMD K6-III";
-    if (cpu == K6_PLUS)     return "AMD K6-2+/III+";
-    return "<UNSUPPORTED CPU>";
+    sys_getCPUIDString(s_sysInfo.cpuidString);
+    s_sysInfo.cpuidInfo = info;   
+    s_sysInfo.cpu = supportedCPUs[UNSUPPORTED_CPU];
+
+    if (info.basic.family != 5)
+        return; /* Not a K6 family chip */
+
+    if (model == 6)                     s_sysInfo.cpu = supportedCPUs[K6];
+    if (model == 7)                     s_sysInfo.cpu = supportedCPUs[K6];
+    if (model == 8 && stepping < 0x0c)  s_sysInfo.cpu = supportedCPUs[K6_2];
+    if (model == 8 && stepping == 0x0c) s_sysInfo.cpu = supportedCPUs[K6_2_CXT];
+    if (model == 9)                     s_sysInfo.cpu = supportedCPUs[K6_III];
+    if (model == 0x0d)                  s_sysInfo.cpu = supportedCPUs[K6_PLUS];
 }
 
 static void k6init_populateSysInfo(void) {
     memset (&s_sysInfo, 0, sizeof(s_sysInfo));
 
-    /* Get CPU info */
-    sys_getCPUIDString(s_sysInfo.cpuidString);
-    s_sysInfo.cpuidInfo = sys_getCPUIDVersionInfo();
-    s_sysInfo.thisCPU = k6init_getSupportedCPUFromCPUID(s_sysInfo.cpuidInfo);
-    s_sysInfo.cpuManufacturer = sys_getCPUManufacturer(NULL);
-
-    if (s_sysInfo.thisCPU != UNSUPPORTED_CPU) {
-        s_sysInfo.criticalError |= !cpu_K6_getMemoryTypeRanges(&s_sysInfo.mtrrs);
+    k6init_populateCPUInfo();
+    
+    if (s_sysInfo.cpu.type != UNSUPPORTED_CPU) {
         s_sysInfo.criticalError |= !cpu_K6_getWriteAllocateRange(&s_sysInfo.whcr);
         s_sysInfo.L1CacheEnabled = cpu_K6_getL1CacheStatus();
-        s_sysInfo.L2CacheEnabled = cpu_K6_getL2CacheStatus();
+
+        if (s_sysInfo.cpu.supportsCxtFeatures)
+            s_sysInfo.criticalError |= !cpu_K6_getMemoryTypeRanges(&s_sysInfo.mtrrs);
+        
+        if (s_sysInfo.cpu.supportsL2)
+            s_sysInfo.L2CacheEnabled = cpu_K6_getL2CacheStatus();
     }
 
-    /* Get memory info */
+    /* Get memory & VESA info*/
     s_sysInfo.memSize = sys_getMemorySize(&s_sysInfo.memHole);
-
-    /* Get VGA BIOS info */
     s_sysInfo.vesaBIOSPresent = vesa_getBiosInfo(&s_sysInfo.vesaBiosInfo);
 }
 
@@ -341,7 +350,7 @@ static void k6init_printAppLogoSysInfo(u8 logoColor) {
     putchar('\n');
 
     /*  If our CPU is unsupported, print info about it, else the clearname */
-    if (s_sysInfo.thisCPU == UNSUPPORTED_CPU) {
+    if (s_sysInfo.cpu.type == UNSUPPORTED_CPU) {
         util_printWithApplicationLogo(&logo, "CPU  \xB3[%s] Type %u Family %u Model %u Stepping %u \n",
             s_sysInfo.cpuidString,
             s_sysInfo.cpuidInfo.basic.type,
@@ -350,10 +359,10 @@ static void k6init_printAppLogoSysInfo(u8 logoColor) {
             s_sysInfo.cpuidInfo.basic.stepping);
     } else {
         util_printWithApplicationLogo(&logo, "CPU  \xB3[");
-        vgacon_printColorString(k6init_getK6CPUString(s_sysInfo.thisCPU), VGACON_COLOR_LGREN, VGACON_COLOR_BLACK, false);
+        vgacon_printColorString(s_sysInfo.cpu.name, VGACON_COLOR_LGREN, VGACON_COLOR_BLACK, false);
         printf("] L1 Cache: %s", s_sysInfo.L1CacheEnabled ? "ON" : "OFF");
 
-        if (s_sysInfo.thisCPU == K6_III || s_sysInfo.thisCPU == K6_PLUS)
+        if (s_sysInfo.cpu.supportsL2)
              printf(", L2 Cache: %s", s_sysInfo.L2CacheEnabled ? "ON" : "OFF");
 
         printf("\n");
@@ -383,12 +392,12 @@ static void k6init_printAppLogoSysInfo(u8 logoColor) {
     }
 
     /*  If the CPU is supported, print MTRR configs, else make clear that it isn't */
-    if (s_sysInfo.thisCPU != UNSUPPORTED_CPU) {
+    if (s_sysInfo.cpu.supportsCxtFeatures) {
         util_printWithApplicationLogo(&logo,     "MTRR \xB3");
         k6init_printCompactMTRRConfigs(NULL, true);
     } else {
         util_printWithApplicationLogo(&logo,     "MTRR \xB3");
-        vgacon_printColorString("< Unsupported CPU detected! >", VGACON_COLOR_LRED, VGACON_COLOR_BLACK, true);
+        vgacon_printColorString("< Not supported by CPU >", VGACON_COLOR_LRED, VGACON_COLOR_BLACK, true);
         putchar('\n');
     }
 
@@ -413,6 +422,9 @@ static bool k6init_doIfSetupAndPrint(bool condition, action function, const char
 
 static bool k6init_doMTRRCfg(void) {
     bool success = true;
+
+    retPrintErrorIf(!s_sysInfo.cpu.supportsCxtFeatures, "MTRRs only supported on K6-2 CXT or higher. Skipping...", 0);
+
     if (s_params.mtrr.lfb) success &= k6init_findAndAddLFBsToMTRRConfig();
     if (s_params.mtrr.pci) success &= k6init_findAndAddPCIFBsToMTRRConfig();
     success &= cpu_K6_setMemoryTypeRanges(&s_params.mtrr.toSet);
@@ -429,12 +441,13 @@ static bool k6init_doWriteAllocCfg(void) {
 }
 
 static bool k6init_doWriteOrderCfg(void) {
+    retPrintErrorIf(!s_sysInfo.cpu.supportsCxtFeatures, "Write ordering not supported on this CPU. Skipping...", 0);
     return cpu_K6_setWriteOrderMode((cpu_K6_WriteOrderMode) s_params.wOrder.mode);
 }
 
 static bool k6init_doMultiCfg(void) {
     cpu_K6_SetMulError errCode;
-    retPrintErrorIf(s_sysInfo.thisCPU != K6_PLUS, "Multiplier configuration only supported on K6-2+/III+. Skipping...", 0);
+    retPrintErrorIf(!s_sysInfo.cpu.supportsMulti, "Multiplier configuration only supported on K6-2+/III+. Skipping...", 0);
     errCode = cpu_K6_setMultiplier(s_params.multi.integer, s_params.multi.decimal);
     retPrintErrorIf(errCode == SETMUL_BADMUL, "The given multiplier value is invalid and not supported!", 0);
     retPrintErrorIf(errCode == SETMUL_ERROR, "There was a system error while setting the multiplier!", 0);
@@ -446,8 +459,7 @@ static bool k6init_doL1Cfg(void) {
 }
 
 static bool k6init_doL2Cfg(void) {
-    bool cpuHasL2 = (s_sysInfo.thisCPU == K6_III || s_sysInfo.thisCPU == K6_PLUS);
-    retPrintErrorIf(cpuHasL2 == false, "This CPU does not have on-die L2 cache. Skipping...", 0);
+    retPrintErrorIf(!s_sysInfo.cpu.supportsL2, "This CPU does not have on-die L2 cache. Skipping...", 0);
     return cpu_K6_setL2Cache(s_params.l2Cache.enable);
 }
 
@@ -629,7 +641,7 @@ int main(int argc, char *argv[]) {
     if (argErr == ARGS_USAGE_PRINTED)               { return 0; }
 
     if      (s_sysInfo.criticalError == true)       { logoColor = VGACON_COLOR_RED; }
-    else if (s_sysInfo.thisCPU == UNSUPPORTED_CPU)  { logoColor = VGACON_COLOR_LRED; }
+    else if (s_sysInfo.cpu.type == UNSUPPORTED_CPU) { logoColor = VGACON_COLOR_LRED; }
     else if (argErr == ARGS_NO_ARGUMENTS)           { logoColor = VGACON_COLOR_YELLO; }
     else if (argErr != ARGS_SUCCESS)                { logoColor = VGACON_COLOR_BROWN; }
 
@@ -638,9 +650,9 @@ int main(int argc, char *argv[]) {
 
     k6init_printAppLogoSysInfo(logoColor);
 
-    if (s_sysInfo.thisCPU == UNSUPPORTED_CPU) {
+    if (s_sysInfo.cpu.type == UNSUPPORTED_CPU) {
         putchar(' ');
-        vgacon_printColorString("Please run this program on an AMD-K6-2 CXT/K6-2+/K6-III/K6-III+!", VGACON_COLOR_LRED, VGACON_COLOR_BLACK, true);
+        vgacon_printColorString("Please run this program on an AMD-K6/K6-2/K6-2+/K6-III/K6-III+!", VGACON_COLOR_LRED, VGACON_COLOR_BLACK, true);
         printf("\n");
         return -1;
     } else if (argErr == ARGS_NO_ARGUMENTS) {

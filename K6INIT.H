@@ -37,20 +37,28 @@ typedef struct {
                 bool enable;                        } prefetch;
 } k6init_Parameters;
 
-
 typedef enum {
-    K6_2_CXT = 0,
+    K6 = 0,
+    K6_2,
+    K6_2_CXT,
     K6_III,
     K6_PLUS,
     UNSUPPORTED_CPU
-} k6init_SupportedCPU;
+} k6init_CPUType;
+
+typedef struct {
+    k6init_CPUType type;
+    const char *name;
+    bool supportsCxtFeatures;
+    bool supportsL2;
+    bool supportsMulti;
+} k6init_CPUCaps;
 
 /* This structure holds all the detected system info we may need for this program. */
 typedef struct {
     sys_CPUIDVersionInfo        cpuidInfo;
-    sys_CPUManufacturer         cpuManufacturer;
     char                        cpuidString[13];
-    k6init_SupportedCPU         thisCPU;
+    k6init_CPUCaps              cpu;
     cpu_K6_MemoryTypeRangeRegs  mtrrs;
     cpu_K6_WriteAllocateConfig  whcr;
     u32                         memSize;
