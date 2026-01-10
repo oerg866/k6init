@@ -49,6 +49,7 @@ typedef enum {
 typedef struct {
     k6init_CPUType type;
     const char *name;
+    bool supportsEFER;
     bool supportsCxtFeatures;
     bool supportsL2;
     bool supportsMulti;

@@ -9,7 +9,7 @@
 
 ---
 
-**K6INIT** is a driver for MS-DOS that lets you configure special features of AMD K6-2/2+/3/3+ processors, replacing tools like `k6dos.sys` and `setk6.exe`, and is similar to FASTVID on Pentium systems.
+**K6INIT** is a driver for MS-DOS that lets you configure special features of AMD K6/K6-2/2+/3/3+ processors, replacing tools like `k6dos.sys` and `setk6.exe`, and is similar to FASTVID on Pentium systems.
 
 While **K6INIT** can run completely autonomously, it supports manual, detailed control over **Memory Type Range Registers** (including Write-Combine and Cachability modes), **Write Allocate**, **Write Ordering**, **CPU Cache** and **Frequency Multiplier**.
 
@@ -18,17 +18,17 @@ even with an extended memory manager (such as `EMM386`) installed.
 
 If called with the `/auto` parameter, **K6INIT** does the following:
 
-- *Write Ordering mode* to **1 (All except UC/WC)**
 - *Write Allocate* for **all system memory** (auto detected)
+- *Write Ordering mode* to **1 (All except UC/WC)** (K6-2 and higher)
 - *Write Combining* for **Linear Frame Buffer(s) exposed by PCI/AGP graphics cards and VESA BIOS**
-  (auto detected)
+  (auto detected) (K6-2 (CXT) and higher)
 - *L1 Cache* to **Enabled**
-- *L2 Cache* to **Enabled** (supported CPUs only!)
-- *Data Prefetch* to **Enabled**
+- *L2 Cache* to **Enabled** (K6-2+/K6-III/K6-III+ only)
+- *Data Prefetch* to **Enabled** (K6-2 and higher)
 
 This can be altered and overridden with many command line parameters.
 
-**K6INIT** runs on Chomper Extended (CXT) K6-2 chips or later.
+**K6INIT** runs on AMD K6 chips or later, but K6 and K6-2 (pre-CXT) only have basic functionality. More in-depth configuration options are available with K6-2 (CXT) and later.
 
 **K6INIT** was built using the [LIB866D DOS Real-Mode Software Development Library](https://github.com/oerg866/lib866d)
 
@@ -37,9 +37,9 @@ This can be altered and overridden with many command line parameters.
 - [x] Detect CPU type automatically
 - [x] Detect total available system memory (Using E820 and E801 methods)
 - [x] Detect 15-16M Memory hole automatically
-- [x] Give precise control over **Memory Type Range Registers (MTRRs)** including **Write-Combine** and **Uncacheable** modes.
-- [x] Set MTRR to enable Write combining for PCI/AGP BAR Frame Buffers automatically
-- [x] Set MTRR to enable Write combining for Linear Frame Buffers (LFBs) automatically (requires graphics card with VESA BIOS extensions)
+- [x] Give precise control over **Memory Type Range Registers (MTRRs)** including **Write-Combine** and **Uncacheable** modes. (K6-2 (CXT) and higher)
+- [x] Set MTRR to enable Write combining for PCI/AGP BAR Frame Buffers automatically (K6-2 (CXT) and higher)
+- [x] Set MTRR to enable Write combining for Linear Frame Buffers (LFBs) automatically (requires graphics card with VESA BIOS extensions) (K6-2 (CXT) and higher)
 - [x] Enable chipset-internal Frame Buffer write cycle acceleration ***(EXPERIMENTAL!!!!)***
 
   Supported chipsets:
@@ -47,17 +47,19 @@ This can be altered and overridden with many command line parameters.
   - SiS 5571, 5581, 5591, 5597
   - SiS 530, 540
 - [x] Set Write allocate for system memory
-- [x] Set Write Order mode
+- [x] Set Write Order mode (K6-2 and higher)
 - [x] Set Frequency Multiplier (K6-2+/III+ only)
 - [X] Enable/Disable L1 Cache
 - [X] Enable/Disable L2 Cache (K6-2+/K6-III/K6-III+ only)
-- [x] Enable/Disable Data Prefetch
+- [x] Enable/Disable Data Prefetch (K6-2 and higher)
 - [x] List all PCI/AGP device Base Address Regions (BARs)
 
 ## Supported Processors
 
 | CPU Type                | Family | Model | Stepping |
 |-------------------------|--------|-------|----------|
+| AMD K6                  | 5      | 6 / 7 | *Any*    |
+| AMD K6-2                | 5      | 8     | <= C     |
 | AMD K6-2 (CXT Core)     | 5      | 8     | C        |
 | AMD K6-III              | 5      | 9     | *Any*    |
 | AMD K6-2+ / AMD K6-III+ | 5      | D     | *Any*    |

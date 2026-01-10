@@ -63,7 +63,7 @@ static bool k6init_argAutoSetup(const void *arg) {
     s_params.wAlloc.size        = s_sysInfo.memSize / 1024UL;
     s_params.wAlloc.hole        = s_sysInfo.memHole;
 
-    s_params.wOrder.setup       = s_sysInfo.cpu.supportsCxtFeatures;
+    s_params.wOrder.setup       = s_sysInfo.cpu.supportsEFER;
     s_params.wOrder.mode        = CPU_K6_WRITEORDER_ALL_EXCEPT_UC_WC;
 
     s_params.l1Cache.setup      = true;
@@ -72,7 +72,7 @@ static bool k6init_argAutoSetup(const void *arg) {
     s_params.l2Cache.setup      = s_sysInfo.cpu.supportsL2;
     s_params.l2Cache.enable     = s_sysInfo.cpu.supportsL2;
 
-    s_params.prefetch.setup     = true;
+    s_params.prefetch.setup     = s_sysInfo.cpu.supportsEFER;
     s_params.prefetch.enable    = true;
 
     s_params.mtrr.setup         = s_sysInfo.cpu.supportsCxtFeatures;
@@ -220,9 +220,15 @@ static bool k6init_argSetL2(const void *arg) {
     return true;
 }
 
+static bool k6init_argSetPrefetch(const void *arg) {
+    UNUSED_ARG(arg);
+    retPrintErrorIf(!s_sysInfo.cpu.supportsEFER, "This CPU doesn't support data prefetch control.", 0);
+    return true;
+}
+
 static bool k6init_argWriteOrder(const void *arg) {
     UNUSED_ARG(arg);
-    retPrintErrorIf(!s_sysInfo.cpu.supportsCxtFeatures, "This CPU doesn't support write ordering.", 0);
+    retPrintErrorIf(!s_sysInfo.cpu.supportsEFER, "This CPU doesn't support write ordering.", 0);
     retPrintErrorIf(s_params.wOrder.mode >= (u8) __CPU_K6_WRITEORDER_MODE_COUNT__,
         "Value %u for Write Order Mode out of range!\n", s_params.wOrder.mode);
     return true;
@@ -244,13 +250,13 @@ static bool k6init_argSetMulti(const void *arg) {
 
 void k6init_populateCPUInfo() {
     static const k6init_CPUCaps supportedCPUs[] = {
-        /* Type             Name                    >=CXT   L2      Multiplier */
-        { K6,               "AMD K6",               false,  false,  false },
-        { K6_2,             "AMD K6-2",             false,  false,  false },
-        { K6_2_CXT,         "AMD K6-2 CXT",         true,   false,  false },
-        { K6_III,           "AMD K6-III",           true,   true,   false },
-        { K6_PLUS,          "AMD K6-2+/III+",       true,   true,   true  },
-        { UNSUPPORTED_CPU,  "<UNSUPPORTED CPU>",    false,  false,  false },
+        /* Type             Name                    EWBE/DPE    >=CXT   L2      Multiplier */
+        { K6,               "AMD K6",               false,      false,  false,  false },
+        { K6_2,             "AMD K6-2",             true,       false,  false,  false },
+        { K6_2_CXT,         "AMD K6-2 CXT",         true,       true,   false,  false },
+        { K6_III,           "AMD K6-III",           true,       true,   true,   false },
+        { K6_PLUS,          "AMD K6-2+/III+",       true,       true,   true,   true  },
+        { UNSUPPORTED_CPU,  "<UNSUPPORTED CPU>",    false,      false,  false,  false },
     };
 
     sys_CPUIDVersionInfo info   = sys_getCPUIDVersionInfo();
@@ -441,7 +447,7 @@ static bool k6init_doWriteAllocCfg(void) {
 }
 
 static bool k6init_doWriteOrderCfg(void) {
-    retPrintErrorIf(!s_sysInfo.cpu.supportsCxtFeatures, "Write ordering not supported on this CPU. Skipping...", 0);
+    retPrintErrorIf(!s_sysInfo.cpu.supportsEFER, "Write ordering not supported on this CPU. Skipping...", 0);
     return cpu_K6_setWriteOrderMode((cpu_K6_WriteOrderMode) s_params.wOrder.mode);
 }
 
@@ -464,6 +470,7 @@ static bool k6init_doL2Cfg(void) {
 }
 
 static bool k6init_doPrefetchCfg(void) {
+    retPrintErrorIf(!s_sysInfo.cpu.supportsEFER, "This CPU does not support data prefetch control. Skipping...", 0);
     return cpu_K6_setDataPrefetch(s_params.prefetch.enable);
 }
 
@@ -505,9 +512,9 @@ static const char k6init_appDescription[] =
     "http://github.com/oerg866/k6init\n"
     "\n"
     "K6INIT is a driver for MS-DOS that lets you configure special features of\n"
-    "AMD K6-2/2+/III/III+ processors, similar to FASTVID on Pentium systems.\n"
+    "AMD K6/K6-2/2+/III/III+ processors, similar to FASTVID on Pentium systems.\n"
     "\n"
-    "It works on Chomper Extended (CXT) K6-2 chips or later.\n"
+    "It works on any K6 family CPUs, but K6 and K6-2 (pre-CXT) lack many features.\n"
     "In contrast to other tools, K6INIT can be loaded from CONFIG.SYS, so it works\n"
     "even with an extended memory manager (such as EMM386) installed.\n"
     "\n"
@@ -604,7 +611,7 @@ static const args_arg k6init_args[] = {
     { "l1",         "1/0",              "Enable/Disable Level 1 cache",                         ARG_BOOL,               &s_params.l1Cache.setup,    &s_params.l1Cache.enable,   NULL },
     { "l2",         "1/0",              "Enable/Disable Level 2 cache",                         ARG_BOOL,               &s_params.l2Cache.setup,    &s_params.l2Cache.enable,   k6init_argSetL2 },
                             ARGS_EXPLAIN("NOTE: Only K6-2+ and K6-III+ have on-die L2 Cache!"),
-    { "prefetch",   "1/0",              "Enable/Disable Data Prefetch",                         ARG_BOOL,               &s_params.prefetch.setup,   &s_params.prefetch.enable,  NULL },
+    { "prefetch",   "1/0",              "Enable/Disable Data Prefetch",                         ARG_BOOL,               &s_params.prefetch.setup,   &s_params.prefetch.enable,  k6init_argSetPrefetch },
 
     ARGS_BLANK,
 
