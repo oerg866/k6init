@@ -656,7 +656,7 @@ int main(int argc, char *argv[]) {
         printf("\n");
         return -1;
     } else if (argErr == ARGS_NO_ARGUMENTS) {
-        vgacon_printWarning("No arguments given. Use /help for more information.\n");
+        vgacon_printWarning("No arguments given. Use /? for more information.\n");
         return 1;
     } else if (argErr != ARGS_SUCCESS) {
         vgacon_printError("User input error, quitting...\n");
