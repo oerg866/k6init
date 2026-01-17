@@ -21,7 +21,7 @@ static k6init_SysInfo       s_sysInfo;
 static char                 s_multiToParse[4] = {0,};
 static u32                  s_MTRRCfgQueue[4];
 
-static const char   k6init_versionString[] = "K6INIT Version 1.4 - (C) 2021-2026 Eric Voirin (oerg866)";
+static const char   k6init_versionString[] = "K6INIT Version 1.4b - (C) 2021-2026 Eric Voirin (oerg866)";
 
 static bool k6init_areAllMTRRsUsed(void) {
     return s_params.mtrr.count >= 2;
@@ -252,7 +252,7 @@ void k6init_populateCPUInfo() {
     static const k6init_CPUCaps supportedCPUs[] = {
         /* Type             Name                    EWBE/DPE    >=CXT   L2      Multiplier */
         { K6,               "AMD K6",               false,      false,  false,  false },
-        { K6_2,             "AMD K6-2",             true,       false,  false,  false },
+        { K6_2,             "AMD K6-2",             false,      false,  false,  false },
         { K6_2_CXT,         "AMD K6-2 CXT",         true,       true,   false,  false },
         { K6_III,           "AMD K6-III",           true,       true,   true,   false },
         { K6_PLUS,          "AMD K6-2+/III+",       true,       true,   true,   true  },
@@ -272,8 +272,8 @@ void k6init_populateCPUInfo() {
 
     if (model == 6)                     s_sysInfo.cpu = supportedCPUs[K6];
     if (model == 7)                     s_sysInfo.cpu = supportedCPUs[K6];
-    if (model == 8 && stepping < 0x0c)  s_sysInfo.cpu = supportedCPUs[K6_2];
-    if (model == 8 && stepping == 0x0c) s_sysInfo.cpu = supportedCPUs[K6_2_CXT];
+    if (model == 8 && stepping < 0x08)  s_sysInfo.cpu = supportedCPUs[K6_2];
+    if (model == 8 && stepping >= 0x08) s_sysInfo.cpu = supportedCPUs[K6_2_CXT];
     if (model == 9)                     s_sysInfo.cpu = supportedCPUs[K6_III];
     if (model == 0x0d)                  s_sysInfo.cpu = supportedCPUs[K6_PLUS];
 }

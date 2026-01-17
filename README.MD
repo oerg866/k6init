@@ -59,8 +59,8 @@ This can be altered and overridden with many command line parameters.
 | CPU Type                | Family | Model | Stepping |
 |-------------------------|--------|-------|----------|
 | AMD K6                  | 5      | 6 / 7 | *Any*    |
-| AMD K6-2                | 5      | 8     | <= C     |
-| AMD K6-2 (CXT Core)     | 5      | 8     | C        |
+| AMD K6-2                | 5      | 8     | 0..7     |
+| AMD K6-2 (CXT Core)     | 5      | 8     | 8..F     |
 | AMD K6-III              | 5      | 9     | *Any*    |
 | AMD K6-2+ / AMD K6-III+ | 5      | D     | *Any*    |
 
