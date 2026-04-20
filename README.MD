@@ -1,4 +1,4 @@
-# K6INIT
+# K6INIT & FBTWEAK
 
 (C) 2021 - 2024, Eric Voirin (oerg866)
 
@@ -30,9 +30,13 @@ This can be altered and overridden with many command line parameters.
 
 **K6INIT** runs on AMD K6 chips or later, but K6 and K6-2 (pre-CXT) only have basic functionality. More in-depth configuration options are available with K6-2 (CXT) and later.
 
-**K6INIT** was built using the [LIB866D DOS Real-Mode Software Development Library](https://github.com/oerg866/lib866d)
+## FBTWEAK
 
-## Features
+**FBTWEAK** is a decoupling of the K6INIT chipset tweaks module into a separate program to allow the user to perform chipset-specific frame buffer acceleration tweaks on Socket 5 / 7 systems without a K6 series CPU.
+
+For more information, check [the FBTWEAK documentation.](FBTWEAK.MD)
+
+## K6INIT Features
 
 - [x] Detect CPU type automatically
 - [x] Detect total available system memory (Using E820 and E801 methods)
@@ -307,3 +311,6 @@ Because when I load it, it reboots my computer. %-)
 # License
 
 [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 (CC BY-NC-SA 4.0)](https://creativecommons.org/licenses/by-nc/4.0/deed.en)
+
+**K6INIT** was built using the [LIB866D DOS Real-Mode Software Development Library](https://github.com/oerg866/lib866d)
+

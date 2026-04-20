@@ -438,8 +438,64 @@ static bool k6init_doMTRRCfg(void) {
     return success;
 }
 
+/* For chipsets that support write cycle acceleration for frame buffers, get a pointer to the first non-vga region MTRR
+   (Returns NULL if there are none) */
+static const cpu_K6_MemoryTypeRange *k6init_getFirstValidNonVgaWcMtrr(const k6init_Parameters *params) {
+    const cpu_K6_MemoryTypeRange *curMtrr;
+    u32 sizeMask = 0xFFFFFUL;
+    size_t i = 0;
+    for (i = 0; i < params->mtrr.count; i++) {
+        curMtrr = &params->mtrr.toSet.configs[i];
+       
+        if (!curMtrr->writeCombine) {                                   /* Skip this MTRR if it's not WC */
+            continue;
+        } else if (curMtrr->offset == 0xA0000UL) {                      /* No VGA FB support on this one */
+            continue;
+        } else if (curMtrr->offset == 0UL || curMtrr->sizeKB == 0UL) {  /* Blank one, ignore  */
+            continue;
+        } else if (curMtrr->offset & sizeMask != 0UL) {                 /* Unaligned MTRR */
+            vgacon_printWarning("LFB offset 0x%08lx not aligned to 20 bits, ignoring\n", curMtrr->offset);
+            continue;
+        }
+        return curMtrr;
+    }
+
+    /* Nothing found! :( )*/
+    return NULL;
+}
+
+/* Returns from running params whether VGA write combine was requested */
+static bool k6init_vgaWcRequested(const k6init_Parameters *params) {
+    size_t i;
+    for (i = 0; i < params->mtrr.count; i++) {
+        if (!params->mtrr.toSet.configs[i].writeCombine) {
+            continue;
+        } else if (params->mtrr.toSet.configs[i].sizeKB == 0UL) {
+            continue;
+        } else if (params->mtrr.toSet.configs[i].offset == 0xA0000) {
+            return true;
+        }
+    }
+    return false;
+}
+
 static bool k6init_doChipsetTweaks(void) {
-    return chipset_autoConfig(&s_params, &s_sysInfo);
+    /*  Perform chipset specific tweaks. 
+        Chipset tweaks are generic; we must build a configuration. */
+    const cpu_K6_MemoryTypeRange *mtrrToUse = k6init_getFirstValidNonVgaWcMtrr(&s_params);
+    chipset_GfxTweakConfig tweak;
+
+    memset(&tweak, 0, sizeof(chipset_GfxTweakConfig));
+
+    if (mtrrToUse != NULL) {
+        tweak.setLfb = true;
+        tweak.offset = mtrrToUse->offset;
+        tweak.sizeKB = mtrrToUse->sizeKB;
+    }
+
+    tweak.setVgaFb = k6init_vgaWcRequested(&s_params);
+
+    return chipset_doFramebufferTweaks(&tweak);
 }
 
 static bool k6init_doWriteAllocCfg(void) {

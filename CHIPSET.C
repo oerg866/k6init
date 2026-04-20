@@ -1,4 +1,4 @@
-#include "k6init.h"
+#include "chipset.h"
 
 #include "pci.h"
 #include "vgacon.h"
@@ -7,8 +7,10 @@
 #define __LIB866D_TAG__ "CHIPSET"
 #include "debug.h"
 
+#define retPrintErrorIf(condition, message, value) if (condition) { vgacon_printError(message "\n", value); return false; }
+
 /* Function pointer to tweaking action for each chipset */
-typedef bool (*chipsetTweakHandler)(const k6init_Parameters *, const k6init_SysInfo*, pci_Device);
+typedef bool (*chipsetTweakHandler)(const chipset_GfxTweakConfig*, pci_Device);
 
 typedef struct {
     u16                 vendor;
@@ -16,45 +18,6 @@ typedef struct {
     const char         *name;
     chipsetTweakHandler handler;
 } chipset_KnownChipset;
-
-/* For chipsets that support write cycle acceleration for frame buffers, get a pointer to the first non-vga region MTRR
-   (Returns NULL if there are none) */
-static const cpu_K6_MemoryTypeRange *chipset_getFirstValidNonVgaWcMtrr(const k6init_Parameters *params, u32 SizeMask) {
-    const cpu_K6_MemoryTypeRange *curMtrr;
-    size_t i = 0;
-    for (i = 0; i < params->mtrr.count; i++) {
-        curMtrr = &params->mtrr.toSet.configs[i];
-       
-        if (!curMtrr->writeCombine) {                                   /* Skip this MTRR if it's not WC */
-            continue;
-        } else if (curMtrr->offset == 0xA0000UL) {                      /* No VGA FB support on this one */
-            continue;
-        } else if (curMtrr->offset == 0UL || curMtrr->sizeKB == 0UL) {  /* Blank one, ignore  */
-            continue;
-        } else if (curMtrr->offset & SizeMask != 0UL) {                 /* Unaligned MTRR */
-            vgacon_printWarning("LFB offset 0x%08lx not aligned to 20 bits, ignoring\n", curMtrr->offset);
-            continue;
-        }
-        return curMtrr;
-    }
-
-    /* Nothing found! :( )*/
-    return NULL;
-}
-
-static bool chipset_vgaWcRequested(const k6init_Parameters *params) {
-    size_t i;
-    for (i = 0; i < params->mtrr.count; i++) {
-        if (!params->mtrr.toSet.configs[i].writeCombine) {
-            continue;
-        } else if (params->mtrr.toSet.configs[i].sizeKB == 0UL) {
-            continue;
-        } else if (params->mtrr.toSet.configs[i].offset == 0xA0000) {
-            return true;
-        }
-    }
-    return false;
-}
 
 
 /*  ALI ALADDIN IV/V:
@@ -156,28 +119,24 @@ static bool aliWriteAladdin5Regs(u32 offset, u32 sizeKB, bool vgaFb, pci_Device 
     pci_writeBytes(secondaryDev, &cpuPciWriteBufferReg, 0x86, 1);
 }
 
-static bool aliAladdinTweaks(const k6init_Parameters *params, const k6init_SysInfo *sysInfo, pci_Device pciDev, bool isAladdin5) {
-    const cpu_K6_MemoryTypeRange *mtrrToUse = chipset_getFirstValidNonVgaWcMtrr(params, 0xFFFFFUL);
-    bool setVgaFb = chipset_vgaWcRequested(params);
-
-    if (mtrrToUse != NULL) {
+static bool aliAladdinTweaks(const chipset_GfxTweakConfig *cfg, pci_Device pciDev, bool isAladdin5) {
+    if (cfg->setLfb) {
         /* We found a suitable FB region to set up for the chipset */
-        vgacon_print("Setting chipset registers for FB region 0x%08lx...\n", mtrrToUse->offset);
-        if (isAladdin5) aliWriteAladdin5Regs (mtrrToUse->offset, mtrrToUse->sizeKB, setVgaFb, pciDev);
-        else            aliWriteAladdin34Regs(mtrrToUse->offset, mtrrToUse->sizeKB, setVgaFb, pciDev);
-    } else if (setVgaFb) {
+        if (isAladdin5) aliWriteAladdin5Regs (cfg->offset, cfg->sizeKB, cfg->setVgaFb, pciDev);
+        else            aliWriteAladdin34Regs(cfg->offset, cfg->sizeKB, cfg->setVgaFb, pciDev);
+    } else if (cfg->setVgaFb) {
         vgacon_printWarning("This chipset can't do VGA burst cycles without another linear FB region!\n");
     }
 
     return true;
 }
 
-static bool chipset_aliAladdin34(const k6init_Parameters *params, const k6init_SysInfo* sysInfo, pci_Device pciDev) {
-    return aliAladdinTweaks(params, sysInfo, pciDev, false);
+static bool chipset_aliAladdin34(const chipset_GfxTweakConfig *cfg, pci_Device pciDev) {
+    return aliAladdinTweaks(cfg, pciDev, false);
 }
 
-static bool chipset_aliAladdin5(const k6init_Parameters *params, const k6init_SysInfo* sysInfo, pci_Device pciDev) {
-    return aliAladdinTweaks(params, sysInfo, pciDev, true);
+static bool chipset_aliAladdin5(const chipset_GfxTweakConfig *cfg, pci_Device pciDev) {
+    return aliAladdinTweaks(cfg, pciDev, true);
 }
 
 /* Like Aladdin chipsets; power of 1 boundary.*/
@@ -252,13 +211,13 @@ static void sisWrite530Regs(u32 offset, u32 sizeKB, pci_Device pciDev) {
     5591 calls it PCI Fast back to back frame buffer
     5597 and 5581 generically call it "fast back to back area"
     registers are the same though. */
-static bool chipset_sis559x(const k6init_Parameters *params, const k6init_SysInfo *sysInfo, pci_Device pciDev) {
-    const cpu_K6_MemoryTypeRange *mtrrToUse = chipset_getFirstValidNonVgaWcMtrr(params, 0xFFFFFUL);
+static bool chipset_sis559x(const chipset_GfxTweakConfig *cfg, pci_Device pciDev) {
+    if (cfg->setVgaFb) {
+        vgacon_printWarning("Chipset does not support VGA region acceleration.\n");
+    }
 
-    /* We found a suitable FB region to set up for the chipset */
-    if (mtrrToUse != NULL) {
-        vgacon_print("Setting chipset registers for FB region 0x%08lx...\n", mtrrToUse->offset);
-        sisWrite5591Regs(mtrrToUse->offset, mtrrToUse->sizeKB, pciDev);
+    if (cfg->setLfb) {
+        sisWrite5591Regs(cfg->offset, cfg->sizeKB, pciDev);
     }
 
     return true;
@@ -266,13 +225,13 @@ static bool chipset_sis559x(const k6init_Parameters *params, const k6init_SysInf
 
 /*  SiS 530/540 chipset tweaks
     Not sure if this works at all. The datasheet is confusing to read. */
-static bool chipset_sis5x0(const k6init_Parameters *params, const k6init_SysInfo *sysInfo, pci_Device pciDev) {
-    const cpu_K6_MemoryTypeRange *mtrrToUse = chipset_getFirstValidNonVgaWcMtrr(params, 0xFFFFFUL);
+static bool chipset_sis5x0(const chipset_GfxTweakConfig *cfg, pci_Device pciDev) {
+    if (cfg->setVgaFb) {
+        vgacon_printWarning("Chipset does not support VGA region acceleration.\n");
+    }
 
-    /* We found a suitable FB region to set up for the chipset */
-    if (mtrrToUse != NULL) {
-        vgacon_print("Setting chipset registers for FB region 0x%08lx...\n", mtrrToUse->offset);
-        sisWrite530Regs(mtrrToUse->offset, mtrrToUse->sizeKB, pciDev);
+    if (cfg->setLfb) {
+        sisWrite530Regs(cfg->offset, cfg->sizeKB, pciDev);
     }
 
     return true;
@@ -289,17 +248,16 @@ static const chipset_KnownChipset chipset_knownChipsets[] = {
     { 0x1039, 0x0001, "SiS 530/540",        chipset_sis5x0 },
 };
 
-bool chipset_autoConfig(const k6init_Parameters *params, const k6init_SysInfo *sysInfo) {
+bool chipset_doFramebufferTweaks(const chipset_GfxTweakConfig *cfg) {
     size_t  i;
     size_t  chipsetCount    = ARRAY_SIZE(chipset_knownChipsets);
     bool    found           = false;
 
-    L866_NULLCHECK(params);
-    L866_NULLCHECK(sysInfo);
+    L866_NULLCHECK(cfg);
 
-    if (!params->mtrr.setup) {
+    if (!cfg->setLfb && !cfg->setVgaFb) {
         /* Leave everything untouched if not wanted */
-        vgacon_printWarning("MTRR setup not requested, nothing to set up in the chipset.\n");
+        vgacon_printWarning("Framebuffer setup not requested, nothing to set up in the chipset.\n");
         return true;
     }
 
@@ -315,11 +273,16 @@ bool chipset_autoConfig(const k6init_Parameters *params, const k6init_SysInfo *s
         if (pci_findDevByID(chipset_knownChipsets[i].vendor, chipset_knownChipsets[i].device, &pciDev)) {
             L866_NULLCHECK(cs->handler);
             vgacon_print("Found supported chipset '%s', applying tweaks...\n", cs->name);
-            retPrintErrorIf(false == cs->handler(params, sysInfo, pciDev), "Error applying tweaks for '%s'!", cs->name);
+            retPrintErrorIf(false == cs->handler(cfg, pciDev), "Error applying tweaks for '%s'!", cs->name);
+            vgacon_printOK("Chipset register setup successful.\n");
+            if (cfg->setLfb) {
+                vgacon_printOK("Frame buffer @ 0x%08lx, size %lu KB\n", cfg->offset, cfg->sizeKB);
+            }
+
             return true;
         }
     }
 
-    vgacon_print("No supported chipset found; skipping chipset tweaks\n");
+    vgacon_printWarning("No supported chipset found; skipping chipset tweaks\n");
     return true;
 }
