@@ -1,4 +1,4 @@
-#include "sys.h"
+#include "cpu.h"
 #include "vesabios.h"
 #include "cpu_k6.h"
 
@@ -57,7 +57,7 @@ typedef struct {
 
 /* This structure holds all the detected system info we may need for this program. */
 typedef struct {
-    sys_CPUIDVersionInfo        cpuidInfo;
+    cpu_CPUIDVersionInfo        cpuidInfo;
     char                        cpuidString[13];
     k6init_CPUCaps              cpu;
     cpu_K6_MemoryTypeRangeRegs  mtrrs;

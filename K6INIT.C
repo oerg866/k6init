@@ -259,11 +259,11 @@ void k6init_populateCPUInfo() {
         { UNSUPPORTED_CPU,  "<UNSUPPORTED CPU>",    false,      false,  false,  false },
     };
 
-    sys_CPUIDVersionInfo info   = sys_getCPUIDVersionInfo();
+    cpu_CPUIDVersionInfo info   = cpu_getCPUIDVersionInfo();
     u16 model                   = info.basic.model;
     u16 stepping                = info.basic.stepping;
 
-    sys_getCPUIDString(s_sysInfo.cpuidString);
+    cpu_getCPUIDString(s_sysInfo.cpuidString);
     s_sysInfo.cpuidInfo = info;   
     s_sysInfo.cpu = supportedCPUs[UNSUPPORTED_CPU];
 
@@ -627,7 +627,7 @@ int main(int argc, char *argv[]) {
     bool            ok = true;
 
     /* V86 mode is a no-no! */
-    if (sys_cpuIsInV86Mode()) {
+    if (cpu_isInV86Mode()) {
         vgacon_printError("K6INIT can't run in V86 mode!\n");
         vgacon_print("Hint: Load it in CONFIG.SYS before memory managers!\n");
         vgacon_print("Example: DEVICE=K6INIT.EXE /auto\n");
