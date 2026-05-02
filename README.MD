@@ -1,6 +1,6 @@
 # K6INIT & FBTWEAK
 
-(C) 2021 - 2024, Eric Voirin (oerg866)
+(C) 2021 - 2026, Eric Voirin (oerg866)
 
 ![image](screenshots/k6init_status.png)
 ![image](screenshots/k6init_auto.png)
@@ -9,7 +9,7 @@
 
 ---
 
-**K6INIT** is a driver for MS-DOS that lets you configure special features of AMD K6/K6-2/2+/3/3+ processors, replacing tools like `k6dos.sys` and `setk6.exe`, and is similar to FASTVID on Pentium systems.
+**K6INIT** is a driver for MS-DOS that lets you configure special features of AMD K5/K6/K6-2/2+/3/3+ processors, replacing tools like `k6dos.sys` and `setk6.exe`, and is similar to FASTVID on Pentium systems.
 
 While **K6INIT** can run completely autonomously, it supports manual, detailed control over **Memory Type Range Registers** (including Write-Combine and Cachability modes), **Write Allocate**, **Write Ordering**, **CPU Cache** and **Frequency Multiplier**.
 
@@ -28,7 +28,7 @@ If called with the `/auto` parameter, **K6INIT** does the following:
 
 This can be altered and overridden with many command line parameters.
 
-**K6INIT** runs on AMD K6 chips or later, but K6 and K6-2 (pre-CXT) only have basic functionality. More in-depth configuration options are available with K6-2 (CXT) and later.
+**K6INIT** runs on AMD K5 chips or later, but K5, K6 and K6-2 (pre-CXT) only have basic functionality. More in-depth configuration options are available with K6-2 (CXT) and later.
 
 ## FBTWEAK
 
@@ -62,6 +62,7 @@ For more information, check [the FBTWEAK documentation.](FBTWEAK.MD)
 
 | CPU Type                | Family | Model | Stepping |
 |-------------------------|--------|-------|----------|
+| AMD K5 w/ Write Allocate| 5      | 0..3  | 4..F     |
 | AMD K6                  | 5      | 6 / 7 | *Any*    |
 | AMD K6-2                | 5      | 8     | 0..7     |
 | AMD K6-2 (CXT Core)     | 5      | 8     | 8..F     |
@@ -70,7 +71,7 @@ For more information, check [the FBTWEAK documentation.](FBTWEAK.MD)
 
 ## System Requirements
 
-* Supported AMD K6 family CPU (see above)
+* Supported AMD K5/6 family CPU (see above)
 * Microsoft MS-DOS 5.0 (or compatible) or higher
     * [X] Microsoft Windows 95/98 support
     * [X] FreeDOS support

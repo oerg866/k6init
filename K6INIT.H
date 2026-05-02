@@ -1,6 +1,6 @@
 #include "cpu.h"
 #include "vesabios.h"
-#include "cpu_k6.h"
+#include "cpu_k86.h"
 
 /* This structure holds all the arguments passed to the program. */
 typedef struct {
@@ -15,7 +15,7 @@ typedef struct {
                 bool lfb;
                 bool noPrefetchOK;
                 size_t count;
-                cpu_K6_MemoryTypeRangeRegs toSet;   } mtrr;
+                cpu_K86_MemoryTypeRangeRegs toSet;   } mtrr;
     /* Write Ordering Config */
     struct {    bool setup;
                 u8 mode;                            } wOrder;
@@ -39,7 +39,8 @@ typedef struct {
 } k6init_Parameters;
 
 typedef enum {
-    K6 = 0,
+    K5 = 0,
+    K6,
     K6_2,
     K6_2_CXT,
     K6_III,
@@ -61,8 +62,8 @@ typedef struct {
     cpu_CPUIDVersionInfo        cpuidInfo;
     char                        cpuidString[13];
     k6init_CPUCaps              cpu;
-    cpu_K6_MemoryTypeRangeRegs  mtrrs;
-    cpu_K6_WriteAllocateConfig  whcr;
+    cpu_K86_MemoryTypeRangeRegs  mtrrs;
+    cpu_K86_WriteAllocateConfig  whcr;
     u32                         memSize;
     bool                        memHole;
     bool                        vesaBIOSPresent;
@@ -74,5 +75,3 @@ typedef struct {
 
 
 #define retPrintErrorIf(condition, message, value) if (condition) { vgacon_printError(message "\n", value); return false; }
-
-bool chipset_autoConfig(const k6init_Parameters *params, const k6init_SysInfo *sysInfo);

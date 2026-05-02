@@ -4,6 +4,7 @@
 #include <ctype.h>
 
 #include "k6init.h"
+#include "chipset.h"
 
 #include "vesabios.h"
 #include "vgacon.h"
@@ -11,7 +12,7 @@
 #include "args.h"
 #include "sys.h"
 #include "pci.h"
-#include "cpu_k6.h"
+#include "cpu_k86.h"
 
 #define __LIB866D_TAG__ "K6INIT"
 #include "debug.h"
@@ -21,7 +22,7 @@ static k6init_SysInfo       s_sysInfo;
 static char                 s_multiToParse[4] = {0,};
 static u32                  s_MTRRCfgQueue[4];
 
-static const char   k6init_versionString[] = "K6INIT Version 1.4b - (C) 2021-2026 Eric Voirin (oerg866)";
+static const char   k6init_versionString[] = "K6INIT Version 1.5 - (C) 2021-2026 Eric Voirin (oerg866)";
 
 static bool k6init_areAllMTRRsUsed(void) {
     return s_params.mtrr.count >= 2;
@@ -100,7 +101,7 @@ static bool k6init_argSkipWAWO(const void *arg) {
 
 static bool k6init_argClearMTRRs(const void *arg) {
     UNUSED_ARG(arg);
-    memset(&s_params.mtrr.toSet, 0, sizeof(cpu_K6_MemoryTypeRangeRegs));
+    memset(&s_params.mtrr.toSet, 0, sizeof(cpu_K86_MemoryTypeRangeRegs));
     s_params.mtrr.count = 2;
     return true;
 }
@@ -232,7 +233,7 @@ static bool k6init_argSetPrefetch(const void *arg) {
 static bool k6init_argWriteOrder(const void *arg) {
     UNUSED_ARG(arg);
     retPrintErrorIf(!s_sysInfo.cpu.supportsEFER, "This CPU doesn't support write ordering.", 0);
-    retPrintErrorIf(s_params.wOrder.mode >= (u8) __CPU_K6_WRITEORDER_MODE_COUNT__,
+    retPrintErrorIf(s_params.wOrder.mode >= (u8) __CPU_K86_WRITEORDER_MODE_COUNT__,
         "Value %u for Write Order Mode out of range!\n", s_params.wOrder.mode);
     return true;
 }
@@ -254,6 +255,7 @@ static bool k6init_argSetMulti(const void *arg) {
 void k6init_populateCPUInfo() {
     static const k6init_CPUCaps supportedCPUs[] = {
         /* Type             Name                    EWBE/DPE    >=CXT   L2      Multiplier */
+        { K5,               "AMD K5",               false,      false,  false,  false },
         { K6,               "AMD K6",               false,      false,  false,  false },
         { K6_2,             "AMD K6-2",             false,      false,  false,  false },
         { K6_2_CXT,         "AMD K6-2 CXT",         true,       true,   false,  false },
@@ -271,8 +273,14 @@ void k6init_populateCPUInfo() {
     s_sysInfo.cpu = supportedCPUs[UNSUPPORTED_CPU];
 
     if (info.basic.family != 5)
-        return; /* Not a K6 family chip */
+        return; /* Not a K86 family chip */
 
+    if (model <= 3 && stepping < 4) {
+        vgacon_printWarning("Your K5 CPU is not recent enough to support the K6INIT features.\n");
+        return;
+    }
+
+    if (model <= 3 && stepping >= 4)    s_sysInfo.cpu = supportedCPUs[K5];
     if (model == 6)                     s_sysInfo.cpu = supportedCPUs[K6];
     if (model == 7)                     s_sysInfo.cpu = supportedCPUs[K6];
     if (model == 8 && stepping < 0x08)  s_sysInfo.cpu = supportedCPUs[K6_2];
@@ -287,14 +295,14 @@ static void k6init_populateSysInfo(void) {
     k6init_populateCPUInfo();
     
     if (s_sysInfo.cpu.type != UNSUPPORTED_CPU) {
-        s_sysInfo.criticalError |= !cpu_K6_getWriteAllocateRange(&s_sysInfo.whcr);
-        s_sysInfo.L1CacheEnabled = cpu_K6_getL1CacheStatus();
+        s_sysInfo.criticalError |= !cpu_K86_getWriteAllocateRange(&s_sysInfo.whcr);
+        s_sysInfo.L1CacheEnabled = cpu_K86_getL1CacheStatus();
 
         if (s_sysInfo.cpu.supportsCxtFeatures)
-            s_sysInfo.criticalError |= !cpu_K6_getMemoryTypeRanges(&s_sysInfo.mtrrs);
+            s_sysInfo.criticalError |= !cpu_K86_getMemoryTypeRanges(&s_sysInfo.mtrrs);
         
         if (s_sysInfo.cpu.supportsL2)
-            s_sysInfo.L2CacheEnabled = cpu_K6_getL2CacheStatus();
+            s_sysInfo.L2CacheEnabled = cpu_K86_getL2CacheStatus();
     }
 
     /* Get memory & VESA info*/
@@ -308,7 +316,7 @@ static void k6init_printCompactMTRRConfigs(const char *optionalTag, bool newLine
     if (s_params.quiet)
         return;
 
-    cpu_K6_getMemoryTypeRanges(&s_sysInfo.mtrrs); /* Update known MTRRs */
+    cpu_K86_getMemoryTypeRanges(&s_sysInfo.mtrrs); /* Update known MTRRs */
 
     if (optionalTag != NULL)
         vgacon_print("%s", optionalTag);
@@ -453,8 +461,8 @@ static bool k6init_doMTRRCfg(void) {
 
 /* For chipsets that support write cycle acceleration for frame buffers, get a pointer to the first non-vga region MTRR
    (Returns NULL if there are none) */
-static const cpu_K6_MemoryTypeRange *k6init_getFirstValidNonVgaWcMtrr(const k6init_Parameters *params) {
-    const cpu_K6_MemoryTypeRange *curMtrr;
+static const cpu_K86_MemoryTypeRange *k6init_getFirstValidNonVgaWcMtrr(const k6init_Parameters *params) {
+    const cpu_K86_MemoryTypeRange *curMtrr;
     u32 sizeMask = 0xFFFFFUL;
     size_t i = 0;
     for (i = 0; i < params->mtrr.count; i++) {
@@ -495,7 +503,7 @@ static bool k6init_vgaWcRequested(const k6init_Parameters *params) {
 static bool k6init_doChipsetTweaks(void) {
     /*  Perform chipset specific tweaks. 
         Chipset tweaks are generic; we must build a configuration. */
-    const cpu_K6_MemoryTypeRange *mtrrToUse = k6init_getFirstValidNonVgaWcMtrr(&s_params);
+    const cpu_K86_MemoryTypeRange *mtrrToUse = k6init_getFirstValidNonVgaWcMtrr(&s_params);
     chipset_GfxTweakConfig tweak;
 
     memset(&tweak, 0, sizeof(chipset_GfxTweakConfig));
@@ -512,35 +520,35 @@ static bool k6init_doChipsetTweaks(void) {
 }
 
 static bool k6init_doWriteAllocCfg(void) {
-    return cpu_K6_setWriteAllocateRangeValues(s_params.wAlloc.size, s_params.wAlloc.hole);
+    return cpu_K86_setWriteAllocateRangeValues(s_params.wAlloc.size, s_params.wAlloc.hole);
 }
 
 static bool k6init_doWriteOrderCfg(void) {
     retPrintErrorIf(!s_sysInfo.cpu.supportsEFER, "Write ordering not supported on this CPU. Skipping...", 0);
-    return cpu_K6_setWriteOrderMode((cpu_K6_WriteOrderMode) s_params.wOrder.mode);
+    return cpu_K86_setWriteOrderMode((cpu_K86_WriteOrderMode) s_params.wOrder.mode);
 }
 
 static bool k6init_doMultiCfg(void) {
-    cpu_K6_SetMulError errCode;
+    cpu_K86_SetMulError errCode;
     retPrintErrorIf(!s_sysInfo.cpu.supportsMulti, "Multiplier configuration only supported on K6-2+/III+. Skipping...", 0);
-    errCode = cpu_K6_setMultiplier(s_params.multi.integer, s_params.multi.decimal);
+    errCode = cpu_K86_setMultiplier(s_params.multi.integer, s_params.multi.decimal);
     retPrintErrorIf(errCode == SETMUL_BADMUL, "The given multiplier value is invalid and not supported!", 0);
     retPrintErrorIf(errCode == SETMUL_ERROR, "There was a system error while setting the multiplier!", 0);
     return true;
 }
 
 static bool k6init_doL1Cfg(void) {
-    return cpu_K6_setL1Cache(s_params.l1Cache.enable);
+    return cpu_K86_setL1Cache(s_params.l1Cache.enable);
 }
 
 static bool k6init_doL2Cfg(void) {
     retPrintErrorIf(!s_sysInfo.cpu.supportsL2, "This CPU does not have on-die L2 cache. Skipping...", 0);
-    return cpu_K6_setL2Cache(s_params.l2Cache.enable);
+    return cpu_K86_setL2Cache(s_params.l2Cache.enable);
 }
 
 static bool k6init_doPrefetchCfg(void) {
     retPrintErrorIf(!s_sysInfo.cpu.supportsEFER, "This CPU does not support data prefetch control. Skipping...", 0);
-    return cpu_K6_setDataPrefetch(s_params.prefetch.enable);
+    return cpu_K86_setDataPrefetch(s_params.prefetch.enable);
 }
 
 bool k6init_doPrintBARs(void) {
@@ -582,9 +590,9 @@ static const char k6init_appDescription[] =
     "http://github.com/oerg866/k6init\n"
     "\n"
     "K6INIT is a driver for MS-DOS that lets you configure special features of\n"
-    "AMD K6/K6-2/2+/III/III+ processors, similar to FASTVID on Pentium systems.\n"
+    "AMD K5/K6/K6-2/2+/III/III+ processors, similar to FASTVID on Pentium systems.\n"
     "\n"
-    "It works on any K6 family CPUs, but K6 and K6-2 (pre-CXT) lack many features.\n"
+    "It works on most K5/K6 family CPUs, but K6 and K6-2 (pre-CXT) lack many features.\n"
     "In contrast to other tools, K6INIT can be loaded from CONFIG.SYS, so it works\n"
     "even with an extended memory manager (such as EMM386) installed.\n"
     "\n"
