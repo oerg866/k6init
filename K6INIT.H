@@ -13,6 +13,7 @@ typedef struct {
                 bool clear;
                 bool pci;
                 bool lfb;
+                bool noPrefetchOK;
                 size_t count;
                 cpu_K6_MemoryTypeRangeRegs toSet;   } mtrr;
     /* Write Ordering Config */

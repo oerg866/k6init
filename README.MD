@@ -20,7 +20,7 @@ If called with the `/auto` parameter, **K6INIT** does the following:
 
 - *Write Allocate* for **all system memory** (auto detected)
 - *Write Ordering mode* to **1 (All except UC/WC)** (K6-2 and higher)
-- *Write Combining* for **Linear Frame Buffer(s) exposed by PCI/AGP graphics cards and VESA BIOS**
+- *Write Combining* for **Linear Frame Buffer(s) exposed by VESA BIOS or prefetchable memory regions from PCI/AGP graphics cards directly**
   (auto detected) (K6-2 (CXT) and higher)
 - *L1 Cache* to **Enabled**
 - *L2 Cache* to **Enabled** (K6-2+/K6-III/K6-III+ only)
@@ -124,6 +124,13 @@ Parts of this procedure can be disabled with the following `/skip` parameters.
 **Description:** Skip Write Allocate / Order setup
 
 The above `/skip` parameters should be used with /auto preceding them.
+---
+### `/forcenonpf`
+**Description:** Use PCI/AGP FBs that are not marked prefetchable
+
+Usually framebuffers in PCI/AGP devices are marked 'prefetchable'. By default, BARs that do not, are ignored.
+
+Use this parameter to force their usage.
 
 ---
 ### `/chipset`

@@ -59,25 +59,26 @@ static bool k6init_addMTRRToConfig(u32 offset, u32 sizeKB, bool writeCombine, bo
 static bool k6init_argAutoSetup(const void *arg) {
     UNUSED_ARG(arg);
 
-    s_params.wAlloc.setup       = true;
-    s_params.wAlloc.size        = s_sysInfo.memSize / 1024UL;
-    s_params.wAlloc.hole        = s_sysInfo.memHole;
+    s_params.wAlloc.setup               = true;
+    s_params.wAlloc.size                = s_sysInfo.memSize / 1024UL;
+    s_params.wAlloc.hole                = s_sysInfo.memHole;
 
-    s_params.wOrder.setup       = s_sysInfo.cpu.supportsEFER;
-    s_params.wOrder.mode        = CPU_K6_WRITEORDER_ALL_EXCEPT_UC_WC;
+    s_params.wOrder.setup               = s_sysInfo.cpu.supportsEFER;
+    s_params.wOrder.mode                = CPU_K86_WRITEORDER_ALL_EXCEPT_UC_WC;
 
-    s_params.l1Cache.setup      = true;
-    s_params.l1Cache.enable     = true;
+    s_params.l1Cache.setup              = true;
+    s_params.l1Cache.enable             = true;
 
-    s_params.l2Cache.setup      = s_sysInfo.cpu.supportsL2;
-    s_params.l2Cache.enable     = s_sysInfo.cpu.supportsL2;
+    s_params.l2Cache.setup              = s_sysInfo.cpu.supportsL2;
+    s_params.l2Cache.enable             = s_sysInfo.cpu.supportsL2;
 
-    s_params.prefetch.setup     = s_sysInfo.cpu.supportsEFER;
-    s_params.prefetch.enable    = true;
+    s_params.prefetch.setup             = s_sysInfo.cpu.supportsEFER;
+    s_params.prefetch.enable            = true;
 
-    s_params.mtrr.setup         = s_sysInfo.cpu.supportsCxtFeatures;
-    s_params.mtrr.pci           = true;
-    s_params.mtrr.lfb           = true;
+    s_params.mtrr.setup                 = s_sysInfo.cpu.supportsCxtFeatures;
+    s_params.mtrr.pci                   = true;
+    s_params.mtrr.lfb                   = true;
+    s_params.mtrr.noPrefetchOK          = false;
 
     return true;
 }
@@ -154,6 +155,7 @@ bool k6init_findAndAddPCIFBsToMTRRConfig(void) {
     pci_DeviceInfo  curDeviceInfo;
     size_t          pciFbsFound = 0;
     u32             i;
+    bool            noPrefetchOK = s_params.mtrr.noPrefetchOK;
 
     retPrintErrorIf(pci_test() == false, "FATAL: Unable to access PCI bus!", 0);
 
@@ -168,6 +170,7 @@ bool k6init_findAndAddPCIFBsToMTRRConfig(void) {
 
         for (i = 0; i < PCI_BARS_MAX; i++) {
             if (curDeviceInfo.bars[i].type != PCI_BAR_MEMORY)               continue; /* Must be memory BAR */
+            if (!curDeviceInfo.bars[i].prefetchable && !noPrefetchOK)       continue; /* Must be prefetchable */
             if (curDeviceInfo.bars[i].size < 1048576UL)                     continue; /* Must be at least 1MB */
             if (k6init_isKnownMTRRAddress(curDeviceInfo.bars[i].address))   continue; /* Must be unknown address */
 
@@ -553,11 +556,12 @@ bool k6init_doPrintBARs(void) {
             curDeviceInfo.vendor, curDeviceInfo.device, curDeviceInfo.classCode, curDeviceInfo.subClass);
         for (i = 0; i < PCI_BARS_MAX; i++) {
             if (curDeviceInfo.bars[i].address > 0UL)
-                vgacon_print("   --> [BAR %lu] @ 0x%08lx (%s) Size %lu KB\n",
+                vgacon_print("   --> [BAR %lu] @ 0x%08lx (%s) Size %lu KB (%s)\n",
                     i,
                     curDeviceInfo.bars[i].address,
                     (curDeviceInfo.bars[i].type == PCI_BAR_MEMORY) ? "Memory" : "I/O",
-                    curDeviceInfo.bars[i].size / 1024UL);
+                    curDeviceInfo.bars[i].size / 1024UL,
+                    curDeviceInfo.bars[i].prefetchable ? "Prefetchable" : "Non-Prefetchable");
         }
     }
 
@@ -600,6 +604,10 @@ static const args_arg k6init_args[] = {
     { "skiplfb",    NULL,               "Skip VESA Linear Frame Buffer Detection & MTRR Setup", ARG_NFLAG,              NULL,                       &s_params.mtrr.lfb,         NULL },
     { "skipcpu",    NULL,               "Skip CPU internals setup (Cache, Prefetch)",           ARG_FLAG,               NULL,                       NULL,                       k6init_argSkipCPUStuff },
     { "skipwawo",   NULL,               "Skip Write Allocate / Order setup",                    ARG_FLAG,               NULL,                       NULL,                       k6init_argSkipWAWO },
+    { "forcenonpf", NULL,               "Use PCI/AGP FBs that are not marked prefetchable",     ARG_FLAG,               NULL,                       &s_params.mtrr.noPrefetchOK,NULL },
+                            ARGS_EXPLAIN("Usually framebuffers in PCI/AGP devices are marked"),
+                            ARGS_EXPLAIN("'prefetchable'. By default, BARs that do not, are"),
+                            ARGS_EXPLAIN("ignored. Use this parameter to force their usage."),
                             ARGS_BLANK,
     { "chipset",    NULL,               "Apply chipset-specific tweaks (EXPERIMENTAL!!)",       ARG_FLAG,               NULL,                       &s_params.chipsetTweaks,    NULL },
                             ARGS_EXPLAIN("WARNING: Highly experimental feature!"),
