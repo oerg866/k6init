@@ -431,12 +431,22 @@ static bool k6init_doIfSetupAndPrint(bool condition, action function, const char
 
 static bool k6init_doMTRRCfg(void) {
     bool success = true;
+    size_t initialMtrrCount = s_params.mtrr.count;
 
     retPrintErrorIf(!s_sysInfo.cpu.supportsCxtFeatures, "MTRRs only supported on K6-2 CXT or higher. Skipping...", 0);
 
     if (s_params.mtrr.lfb) success &= k6init_findAndAddLFBsToMTRRConfig();
-    if (s_params.mtrr.pci) success &= k6init_findAndAddPCIFBsToMTRRConfig();
-    success &= cpu_K6_setMemoryTypeRanges(&s_params.mtrr.toSet);
+
+    /*  Only do PCI FBs if we found no VESA LFBs.
+        This is the most sensible solution because some devices report multiple memory regions and you can't really distinguish
+        frame buffers from other stuff. */
+    if (s_params.mtrr.pci && s_params.mtrr.count == initialMtrrCount) {
+        vgacon_print("VESA LFB Scan successful, skipping PCI/AGP FB scan.\n");
+    } else if (s_params.mtrr.pci) {
+        success &= k6init_findAndAddPCIFBsToMTRRConfig();
+    }
+
+    success &= cpu_K86_setMemoryTypeRanges(&s_params.mtrr.toSet);
     k6init_printCompactMTRRConfigs("New MTRR setup: ", true);
     return success;
 }
