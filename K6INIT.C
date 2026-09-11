@@ -7,7 +7,7 @@
 #include "chipset.h"
 
 #include "vesabios.h"
-#include "vgacon.h"
+#include "console.h"
 #include "util.h"
 #include "args.h"
 #include "sys.h"
@@ -22,7 +22,7 @@ static k6init_SysInfo       s_sysInfo;
 static char                 s_multiToParse[4] = {0,};
 static u32                  s_MTRRCfgQueue[4];
 
-static const char   k6init_versionString[] = "K6INIT Version 1.5 - (C) 2021-2026 Eric Voirin (oerg866)";
+static const char   k6init_versionString[] = "K6INIT Version 1.6 - (C) 2021-2026 Eric Voirin (oerg866)";
 
 static bool k6init_areAllMTRRsUsed(void) {
     return s_params.mtrr.count >= 2;
@@ -39,7 +39,7 @@ static bool k6init_addMTRRToConfig(u32 offset, u32 sizeKB, bool writeCombine, bo
     retPrintErrorIf(sizeKB < 128UL,                 "Requested MTRR size of %lu KB is too small (< 128KB)!",    sizeKB);
 
     if (k6init_isKnownMTRRAddress(offset)) {
-        vgacon_printWarning("MTRR address 0x%lx already known, ignoring....\n", offset);
+        con_warning("MTRR address 0x%lx already known, ignoring....\n", offset);
         return true;
     }
 
@@ -124,7 +124,7 @@ bool k6init_findAndAddLFBsToMTRRConfig(void) {
 
     retPrintErrorIf(vesaBiosValid == false, "No VESA BIOS found, cannot scan for LFBs!", 0);
 
-    vgacon_print("Scanning %u VESA modes for Linear Frame Buffers...\n", (u16) vesa_getModeCount(&s_sysInfo.vesaBiosInfo));
+    con_plain("Scanning %u VESA modes for Linear Frame Buffers...\n", (u16) vesa_getModeCount(&s_sysInfo.vesaBiosInfo));
 
     for (i = 0; i < vesa_getModeCount(&s_sysInfo.vesaBiosInfo); i++) {
         retPrintErrorIf(false == vesa_getModeInfoByIndex(&s_sysInfo.vesaBiosInfo, &currentMode, i),
@@ -136,18 +136,18 @@ bool k6init_findAndAddLFBsToMTRRConfig(void) {
         }
 
         if (k6init_areAllMTRRsUsed()) {
-            vgacon_printWarning("MTRR list full, stopping search...\n");
+            con_warning("MTRR list full, stopping search...\n");
             break;
         }
 
-        vgacon_print("Found Linear Frame Buffer at: 0x%08lx\n", currentMode.lfbAddress);
+        con_plain("Found Linear Frame Buffer at: 0x%08lx\n", currentMode.lfbAddress);
         lfbsFound++;
 
         retPrintErrorIf(false == k6init_addMTRRToConfig(currentMode.lfbAddress, vramSizeKB, true, false),
             "Error adding LFB address to MTRR list!", 0);
     }
 
-    vgacon_printOK("Added %u VESA Frame Buffers to MTRR list.\n", (unsigned) lfbsFound);
+    con_ok("Added %u VESA Frame Buffers to MTRR list.\n", (unsigned) lfbsFound);
     return true;
 }
 
@@ -167,7 +167,7 @@ bool k6init_findAndAddPCIFBsToMTRRConfig(void) {
 
         retPrintErrorIf(pci_populateDeviceInfo(&curDeviceInfo, *curDevice) == false, "Failed to read PCI device info!", 0);
 
-        vgacon_print("Found Graphics Card, Vendor 0x%04x, Device 0x%04x\n", curDeviceInfo.vendor, curDeviceInfo.device);
+        con_plain("Found Graphics Card, Vendor 0x%04x, Device 0x%04x\n", curDeviceInfo.vendor, curDeviceInfo.device);
 
         for (i = 0; i < PCI_BARS_MAX; i++) {
             if (curDeviceInfo.bars[i].type != PCI_BAR_MEMORY)               continue; /* Must be memory BAR */
@@ -176,15 +176,15 @@ bool k6init_findAndAddPCIFBsToMTRRConfig(void) {
             if (k6init_isKnownMTRRAddress(curDeviceInfo.bars[i].address))   continue; /* Must be unknown address */
 
             if (k6init_areAllMTRRsUsed()) {
-                vgacon_printWarning("MTRR list full, stopping search...\n");
+                con_warning("MTRR list full, stopping search...\n");
                 break;
             }
 
-            vgacon_print("Found PCI/AGP frame buffer at: 0x%08lx\n", curDeviceInfo.bars[i].address);
+            con_plain("Found PCI/AGP frame buffer at: 0x%08lx\n", curDeviceInfo.bars[i].address);
             pciFbsFound++;
 
             if (false == k6init_addMTRRToConfig(curDeviceInfo.bars[i].address, curDeviceInfo.bars[i].size / 1024UL, true, false)) {
-                vgacon_printError("Error adding LFB address to MTRR list!\n");
+                con_error("Error adding LFB address to MTRR list!\n");
                 free(curDevice);
                 return false;
             }
@@ -194,7 +194,7 @@ bool k6init_findAndAddPCIFBsToMTRRConfig(void) {
     if (curDevice != NULL)
         free(curDevice);
 
-    vgacon_printOK("Added %u PCI/AGP Frame Buffers to MTRR list.\n", (unsigned) pciFbsFound);
+    con_ok("Added %u PCI/AGP Frame Buffers to MTRR list.\n", (unsigned) pciFbsFound);
     return true;
 }
 
@@ -276,7 +276,7 @@ void k6init_populateCPUInfo() {
         return; /* Not a K86 family chip */
 
     if (model <= 3 && stepping < 4) {
-        vgacon_printWarning("Your K5 CPU is not recent enough to support the K6INIT features.\n");
+        con_warning("Your K5 CPU is not recent enough to support the K6INIT features.\n");
         return;
     }
 
@@ -319,19 +319,19 @@ static void k6init_printCompactMTRRConfigs(const char *optionalTag, bool newLine
     cpu_K86_getMemoryTypeRanges(&s_sysInfo.mtrrs); /* Update known MTRRs */
 
     if (optionalTag != NULL)
-        vgacon_print("%s", optionalTag);
+        con_plain("%s", optionalTag);
 
     for (i = 0; i < 2; i++) {
         if (s_sysInfo.mtrrs.configs[i].isValid == true) {
-            printf("<%u: %lu KB @ %08lx> ", i,
+            con_plain("<%u: %lu KB @ %08lx> ", i,
                 s_sysInfo.mtrrs.configs[i].sizeKB,
                 s_sysInfo.mtrrs.configs[i].offset);
         } else {
-            printf("<%u: unconfigured> ", (u16) i);
+            con_plain("<%u: unconfigured> ", (u16) i);
         }
     }
 
-    printf("%s", newLine ? "\n" : "");
+    con_plain("%s", newLine ? "\n" : "");
 }
 
 static void k6init_printAppLogoSysInfo(u8 logoColor) {
@@ -345,11 +345,11 @@ static void k6init_printAppLogoSysInfo(u8 logoColor) {
         0x20, 0xDB, 0xDB, 0xDB, 0xDC, 0xDC, 0xDC, 0xDB, 0xDB, 0xDB, 0x20, 0x20,
         0x20, 0xDB, 0xDB, 0xDB, 0xDB, 0xDF, 0x20, 0x20, 0xDF, 0xDB, 0x20, 0x20
     };
-    util_ApplicationLogo logo = { (const char *)k6initLogoData, LOGO_HEADER_WIDTH, LOGO_HEADER_HEIGHT, 0, VGACON_COLOR_BLACK };
+    util_ApplicationLogo logo = { (const char *)k6initLogoData, LOGO_HEADER_WIDTH, LOGO_HEADER_HEIGHT, 0, CON_COLOR_BLACK };
 
     /* In quiet mode, we don't print anything except for the header */
     if (s_params.quiet) {
-        printf("%s\n", k6init_versionString);
+        con_plain("%s\n", k6init_versionString);
         return;
     }
 
@@ -361,10 +361,10 @@ static void k6init_printAppLogoSysInfo(u8 logoColor) {
 
     /* Print the line with the little twig going down after 5 characters */
     util_printWithApplicationLogo(&logo, "");
-    vgacon_fillCharacter('\xC4', 5);
-    vgacon_fillCharacter('\xC2', 1);
-    vgacon_fillCharacter('\xC4', 60);
-    putchar('\n');
+    con_colorFill('\xC4', 5, CON_COLOR_DEFAULT, CON_COLOR_DEFAULT);
+    con_colorFill('\xC2', 1, CON_COLOR_DEFAULT, CON_COLOR_DEFAULT);
+    con_colorFill('\xC4', 60, CON_COLOR_DEFAULT, CON_COLOR_DEFAULT);
+    con_putc('\n');
 
     /*  If our CPU is unsupported, print info about it, else the clearname */
     if (s_sysInfo.cpu.type == UNSUPPORTED_CPU) {
@@ -376,24 +376,24 @@ static void k6init_printAppLogoSysInfo(u8 logoColor) {
             s_sysInfo.cpuidInfo.basic.stepping);
     } else {
         util_printWithApplicationLogo(&logo, "CPU  \xB3[");
-        vgacon_printColorString(s_sysInfo.cpu.name, VGACON_COLOR_LGREN, VGACON_COLOR_BLACK, false);
-        printf("] L1 Cache: %s", s_sysInfo.L1CacheEnabled ? "ON" : "OFF");
+        con_colorText(s_sysInfo.cpu.name, CON_COLOR_LGREEN, CON_COLOR_BLACK);
+        con_plain("] L1 Cache: %s", s_sysInfo.L1CacheEnabled ? "ON" : "OFF");
 
         if (s_sysInfo.cpu.supportsL2)
-             printf(", L2 Cache: %s", s_sysInfo.L2CacheEnabled ? "ON" : "OFF");
+             con_plain(", L2 Cache: %s", s_sysInfo.L2CacheEnabled ? "ON" : "OFF");
 
-        printf("\n");
+        con_plain("\n");
     }
 
     /* Print RAM info, should be reliable across all platforms we run on... */
     util_printWithApplicationLogo(&logo,     "RAM  \xB3");
     if (s_sysInfo.memSize > 0) {
-        printf("%lu KB, 15MB Hole: %s\n",
+        con_plain("%lu KB, 15MB Hole: %s\n",
             s_sysInfo.memSize / 1024UL,
             s_sysInfo.memHole ? "Yes" : "No");
     } else {
-        vgacon_printColorString("? (Detection failed!)", VGACON_COLOR_YELLO, VGACON_COLOR_BLACK, true);
-        printf("\n");
+        con_colorText("? (Detection failed!)", CON_COLOR_YELLOW, CON_COLOR_DGRAY);
+        con_plain("\n");
     }
 
     /* If we found a valid VESA BIOS, print some info about it */
@@ -414,23 +414,29 @@ static void k6init_printAppLogoSysInfo(u8 logoColor) {
         k6init_printCompactMTRRConfigs(NULL, true);
     } else {
         util_printWithApplicationLogo(&logo,     "MTRR \xB3");
-        vgacon_printColorString("< Not supported by CPU >", VGACON_COLOR_LRED, VGACON_COLOR_BLACK, true);
-        putchar('\n');
+        con_colorText("< Not supported by CPU >", CON_COLOR_LRED, CON_COLOR_DGRAY);
+        con_putc('\n');
     }
 
-    putchar('\n');
+    con_putc('\n');
 }
 
 typedef bool (*action)(void);   /* Function pointer to action to execute if condition is true */
 static bool k6init_doIfSetupAndPrint(bool condition, action function, const char *fmt, ...) {
+    char buf[128] = {0};
     if (condition) {
         va_list args;
         bool success = function();
-        vgacon_LogLevel logLevel = success ? VGACON_LOG_LEVEL_OK : VGACON_LOG_LEVEL_ERROR;
 
         va_start(args, fmt);
-        vgacon_vprintfLogLevel(logLevel, fmt, args, true);
+        _vsnprintf(buf, sizeof(buf)-1, fmt, args);
         va_end(args);
+
+        if (success) {
+            con_ok("%s\n", buf);
+        } else {
+            con_error("%s\n", buf);
+        }
 
         return success;
     }
@@ -449,7 +455,7 @@ static bool k6init_doMTRRCfg(void) {
         This is the most sensible solution because some devices report multiple memory regions and you can't really distinguish
         frame buffers from other stuff. */
     if (s_params.mtrr.pci && s_params.mtrr.count == initialMtrrCount) {
-        vgacon_print("VESA LFB Scan successful, skipping PCI/AGP FB scan.\n");
+        con_plain("VESA LFB Scan successful, skipping PCI/AGP FB scan.\n");
     } else if (s_params.mtrr.pci) {
         success &= k6init_findAndAddPCIFBsToMTRRConfig();
     }
@@ -475,7 +481,7 @@ static const cpu_K86_MemoryTypeRange *k6init_getFirstValidNonVgaWcMtrr(const k6i
         } else if (curMtrr->offset == 0UL || curMtrr->sizeKB == 0UL) {  /* Blank one, ignore  */
             continue;
         } else if (curMtrr->offset & sizeMask != 0UL) {                 /* Unaligned MTRR */
-            vgacon_printWarning("LFB offset 0x%08lx not aligned to 20 bits, ignoring\n", curMtrr->offset);
+            con_warning("LFB offset 0x%08lx not aligned to 20 bits, ignoring\n", curMtrr->offset);
             continue;
         }
         return curMtrr;
@@ -559,22 +565,22 @@ bool k6init_doPrintBARs(void) {
     retPrintErrorIf(pci_test() == false, "FATAL: Unable to access PCI bus!", 0);
 
     if (s_params.quiet) {
-        vgacon_printWarning("/listbars used with /quiet, unmuting the program!\n");
-        vgacon_setLogLevel(VGACON_LOG_LEVEL_INFO);
+        con_warning("/listbars used with /quiet, unmuting the program!\n");
+        con_setLevel(con_levelInfo);
     }
 
     while (NULL != (curDevice = pci_getNextDevice(curDevice))) {
         if (pci_populateDeviceInfo(&curDeviceInfo, *curDevice) == false) {
-            vgacon_printWarning("Failed to obtain PCI device info...\n");
+            con_warning("Failed to obtain PCI device info...\n");
             continue;
         }
 
-        vgacon_printOK("[Device @ %u:%u:%u] ", curDevice->bus, curDevice->slot, curDevice->func);
-        printf("Vendor 0x%04x Device 0x%04x Class %02x Subclass %02x:\n",
+        con_ok("[Device @ %u:%u:%u] ", curDevice->bus, curDevice->slot, curDevice->func);
+        con_plain("Vendor 0x%04x Device 0x%04x Class %02x Subclass %02x:\n",
             curDeviceInfo.vendor, curDeviceInfo.device, curDeviceInfo.classCode, curDeviceInfo.subClass);
         for (i = 0; i < PCI_BARS_MAX; i++) {
             if (curDeviceInfo.bars[i].address > 0UL)
-                vgacon_print("   --> [BAR %lu] @ 0x%08lx (%s) Size %lu KB (%s)\n",
+                con_print("   --> [BAR %lu] @ 0x%08lx (%s) Size %lu KB (%s)\n",
                     i,
                     curDeviceInfo.bars[i].address,
                     (curDeviceInfo.bars[i].type == PCI_BAR_MEMORY) ? "Memory" : "I/O",
@@ -705,20 +711,20 @@ int main(int argc, char *argv[]) {
                                             "1, All except Uncacheable/Write-Combined",
                                             "2, No Memory Regions" };
     args_ParseError argErr;
-    u8              logoColor = VGACON_COLOR_GREEN;
+    u8              logoColor = CON_COLOR_GREEN;
     bool            ok = true;
 
     /* V86 mode is a no-no! */
     if (cpu_isInV86Mode()) {
-        vgacon_printError("K6INIT can't run in V86 mode!\n");
-        vgacon_print("Hint: Load it in CONFIG.SYS before memory managers!\n");
-        vgacon_print("Example: DEVICE=K6INIT.EXE /auto\n");
+        con_error("K6INIT can't run in V86 mode!\n");
+        con_plain("Hint: Load it in CONFIG.SYS before memory managers!\n");
+        con_plain("Example: DEVICE=K6INIT.EXE /auto\n");
         return -1;
     }
 
     /* Privileged instructions cause GPFs on WINDOWS, so we exit. */
     if (sys_getWindowsMode() != OS_PURE_DOS) {
-         vgacon_printError("K6INIT cannot run on Windows.\n");
+         con_error("K6INIT cannot run on Windows.\n");
          return -1;
     }
 
@@ -729,26 +735,26 @@ int main(int argc, char *argv[]) {
 
     if (argErr == ARGS_USAGE_PRINTED)               { return 0; }
 
-    if      (s_sysInfo.criticalError == true)       { logoColor = VGACON_COLOR_RED; }
-    else if (s_sysInfo.cpu.type == UNSUPPORTED_CPU) { logoColor = VGACON_COLOR_LRED; }
-    else if (argErr == ARGS_NO_ARGUMENTS)           { logoColor = VGACON_COLOR_YELLO; }
-    else if (argErr != ARGS_SUCCESS)                { logoColor = VGACON_COLOR_BROWN; }
+    if      (s_sysInfo.criticalError == true)       { logoColor = CON_COLOR_RED; }
+    else if (s_sysInfo.cpu.type == UNSUPPORTED_CPU) { logoColor = CON_COLOR_LRED; }
+    else if (argErr == ARGS_NO_ARGUMENTS)           { logoColor = CON_COLOR_YELLOW; }
+    else if (argErr != ARGS_SUCCESS)                { logoColor = CON_COLOR_BROWN; }
 
     if (s_params.quiet)
-        vgacon_setLogLevel(VGACON_LOG_LEVEL_WARNING);
+        con_setLevel(con_levelWarning);
 
     k6init_printAppLogoSysInfo(logoColor);
 
     if (s_sysInfo.cpu.type == UNSUPPORTED_CPU) {
-        putchar(' ');
-        vgacon_printColorString("Please run this program on an AMD-K6/K6-2/K6-2+/K6-III/K6-III+!", VGACON_COLOR_LRED, VGACON_COLOR_BLACK, true);
-        printf("\n");
+        con_putc(' ');
+        con_colorText("Please run this program on an AMD-K6/K6-2/K6-2+/K6-III/K6-III+!\n", CON_COLOR_LRED, CON_COLOR_DGRAY);
+        con_plain("\n");
         return -1;
     } else if (argErr == ARGS_NO_ARGUMENTS) {
-        vgacon_printWarning("No arguments given. Use /? for more information.\n");
+        con_warning("No arguments given. Use /? for more information.\n");
         return 1;
     } else if (argErr != ARGS_SUCCESS) {
-        vgacon_printError("User input error, quitting...\n");
+        con_error("User input error, quitting...\n");
         return (int) argErr;
     }
 
@@ -769,7 +775,7 @@ int main(int argc, char *argv[]) {
     ok &= k6init_doIfSetupAndPrint(s_params.prefetch.setup, k6init_doPrefetchCfg,   "Set Data Prefetch (%s)",
                                                                                         s_params.prefetch.enable ? "On" : "Off");
     if (!ok)
-        vgacon_printWarning("Summary: Some actions failed!\n");
+        con_warning("Summary: Some actions failed!\n");
 
     return (ok == true) ? 0 : -1;
 }

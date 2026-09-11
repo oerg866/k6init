@@ -1,13 +1,12 @@
 #include "chipset.h"
 
 #include "pci.h"
-#include "vgacon.h"
 #include "util.h"
 
 #define __LIB866D_TAG__ "CHIPSET"
 #include "debug.h"
 
-#define retPrintErrorIf(condition, message, value) if (condition) { vgacon_printError(message "\n", value); return false; }
+#define retPrintErrorIf(condition, message, value) if (condition) { con_error(message "\n", value); return false; }
 
 /* Function pointer to tweaking action for each chipset */
 typedef bool (*chipsetTweakHandler)(const chipset_GfxTweakConfig*, pci_Device);
@@ -30,9 +29,9 @@ static u16 aliGetFbSizeRegValue(u32 sizeKB) {
     u16 ret = 0;
 
     if (sizeMB > 16) {
-        vgacon_printWarning("Frame Buffer size > 16MB not officially supported by chipset!\n");
+        con_warning("Frame Buffer size > 16MB not officially supported by chipset!\n");
     } else if (sizeMB > 128) {
-        vgacon_printWarning("Frame Buffer (%lu MB) too big! Clamping to 128MB\n", sizeMB);
+        con_warning("Frame Buffer (%lu MB) too big! Clamping to 128MB\n", sizeMB);
         return 0x7;
     }
 
@@ -125,7 +124,7 @@ static bool aliAladdinTweaks(const chipset_GfxTweakConfig *cfg, pci_Device pciDe
         if (isAladdin5) aliWriteAladdin5Regs (cfg->offset, cfg->sizeKB, cfg->setVgaFb, pciDev);
         else            aliWriteAladdin34Regs(cfg->offset, cfg->sizeKB, cfg->setVgaFb, pciDev);
     } else if (cfg->setVgaFb) {
-        vgacon_printWarning("This chipset can't do VGA burst cycles without another linear FB region!\n");
+        con_warning("This chipset can't do VGA burst cycles without another linear FB region!\n");
     }
 
     return true;
@@ -213,7 +212,7 @@ static void sisWrite530Regs(u32 offset, u32 sizeKB, pci_Device pciDev) {
     registers are the same though. */
 static bool chipset_sis559x(const chipset_GfxTweakConfig *cfg, pci_Device pciDev) {
     if (cfg->setVgaFb) {
-        vgacon_printWarning("Chipset does not support VGA region acceleration.\n");
+        con_warning("Chipset does not support VGA region acceleration.\n");
     }
 
     if (cfg->setLfb) {
@@ -227,7 +226,7 @@ static bool chipset_sis559x(const chipset_GfxTweakConfig *cfg, pci_Device pciDev
     Not sure if this works at all. The datasheet is confusing to read. */
 static bool chipset_sis5x0(const chipset_GfxTweakConfig *cfg, pci_Device pciDev) {
     if (cfg->setVgaFb) {
-        vgacon_printWarning("Chipset does not support VGA region acceleration.\n");
+        con_warning("Chipset does not support VGA region acceleration.\n");
     }
 
     if (cfg->setLfb) {
@@ -257,12 +256,12 @@ bool chipset_doFramebufferTweaks(const chipset_GfxTweakConfig *cfg) {
 
     if (!cfg->setLfb && !cfg->setVgaFb) {
         /* Leave everything untouched if not wanted */
-        vgacon_printWarning("Framebuffer setup not requested, nothing to set up in the chipset.\n");
+        con_warning("Framebuffer setup not requested, nothing to set up in the chipset.\n");
         return true;
     }
 
     if (!pci_test()) {
-        vgacon_printWarning("PCI Bus inaccessible, skipping chipset tweaks\n");
+        con_warning("PCI Bus inaccessible, skipping chipset tweaks\n");
         return true;
     }
 
@@ -272,17 +271,17 @@ bool chipset_doFramebufferTweaks(const chipset_GfxTweakConfig *cfg) {
 
         if (pci_findDevByID(chipset_knownChipsets[i].vendor, chipset_knownChipsets[i].device, &pciDev)) {
             L866_NULLCHECK(cs->handler);
-            vgacon_print("Found supported chipset '%s', applying tweaks...\n", cs->name);
+            con_print("Found supported chipset '%s', applying tweaks...\n", cs->name);
             retPrintErrorIf(false == cs->handler(cfg, pciDev), "Error applying tweaks for '%s'!", cs->name);
-            vgacon_printOK("Chipset register setup successful.\n");
+            con_ok("Chipset register setup successful.\n");
             if (cfg->setLfb) {
-                vgacon_printOK("Frame buffer @ 0x%08lx, size %lu KB\n", cfg->offset, cfg->sizeKB);
+                con_ok("Frame buffer @ 0x%08lx, size %lu KB\n", cfg->offset, cfg->sizeKB);
             }
 
             return true;
         }
     }
 
-    vgacon_printWarning("No supported chipset found; skipping chipset tweaks\n");
+    con_warning("No supported chipset found; skipping chipset tweaks\n");
     return true;
 }

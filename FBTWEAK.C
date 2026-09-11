@@ -6,7 +6,7 @@
 #include "chipset.h"
 
 #include "vesabios.h"
-#include "vgacon.h"
+#include "console.h"
 #include "util.h"
 #include "args.h"
 #include "sys.h"
@@ -15,7 +15,7 @@
 #define __LIB866D_TAG__ "FBTWEAK"
 #include "debug.h"
 
-#define retPrintErrorIf(condition, message, value) if (condition) { vgacon_printError(message "\n", value); return false; }
+#define retPrintErrorIf(condition, message, value) if (condition) { con_error(message "\n", value); return false; }
 
 static vesa_BiosInfo vesaBiosInfo;
 
@@ -56,7 +56,7 @@ bool getVesaLfb(chipset_GfxTweakConfig *cfg) {
 
     retPrintErrorIf(vesaBiosValid == false, "No VESA BIOS found, cannot scan for LFBs!", 0);
 
-    vgacon_print("Scanning %u VESA modes for Linear Frame Buffers...\n", (u16) vesa_getModeCount(&vesaBiosInfo));
+    con_plain("Scanning %u VESA modes for Linear Frame Buffers...\n", (u16) vesa_getModeCount(&vesaBiosInfo));
 
     for (i = 0; i < vesa_getModeCount(&vesaBiosInfo); i++) {
         retPrintErrorIf(false == vesa_getModeInfoByIndex(&vesaBiosInfo, &currentMode, i),
@@ -67,14 +67,14 @@ bool getVesaLfb(chipset_GfxTweakConfig *cfg) {
             continue;
         }
 
-        vgacon_printOK("Found Linear Frame Buffer at: 0x%08lx\n", currentMode.lfbAddress);
+        con_ok("Found Linear Frame Buffer at: 0x%08lx\n", currentMode.lfbAddress);
         cfg->setLfb = true;
         cfg->offset = currentMode.lfbAddress;
         cfg->sizeKB = vramSizeKB;
         return true;
     }
  
-    vgacon_printWarning("No VESA Linear Frame Buffer found.\n");
+    con_warning("No VESA Linear Frame Buffer found.\n");
  
     return false;
 }
@@ -95,14 +95,14 @@ bool getPciAgpLfb(chipset_GfxTweakConfig *cfg, bool noPrefetchOk) {
 
         retPrintErrorIf(pci_populateDeviceInfo(&curDeviceInfo, *curDevice) == false, "Failed to read PCI device info!", 0);
 
-        vgacon_printOK("Found Graphics Card, Vendor 0x%04x, Device 0x%04x\n", curDeviceInfo.vendor, curDeviceInfo.device);
+        con_ok("Found Graphics Card, Vendor 0x%04x, Device 0x%04x\n", curDeviceInfo.vendor, curDeviceInfo.device);
 
         for (i = 0; i < PCI_BARS_MAX; i++) {
             if (curDeviceInfo.bars[i].type != PCI_BAR_MEMORY)               continue; /* Must be memory BAR */
             if (!curDeviceInfo.bars[i].prefetchable && !noPrefetchOk)       continue; /* Must be prefetchable */
             if (curDeviceInfo.bars[i].size < 1048576UL)                     continue; /* Must be at least 1MB */
 
-            vgacon_printOK("Found PCI/AGP frame buffer at: 0x%08lx\n", curDeviceInfo.bars[i].address);
+            con_ok("Found PCI/AGP frame buffer at: 0x%08lx\n", curDeviceInfo.bars[i].address);
 
             cfg->setLfb = true;
             cfg->offset = curDeviceInfo.bars[i].address;
@@ -116,7 +116,7 @@ bool getPciAgpLfb(chipset_GfxTweakConfig *cfg, bool noPrefetchOk) {
     if (curDevice != NULL)
         free(curDevice);
 
-    vgacon_printWarning("No PCI/AGP LFBs found\n");
+    con_warning("No PCI/AGP LFBs found\n");
     return false;
 }
 
@@ -128,7 +128,7 @@ int main(int argc, char *argv[]) {
 
     /* Privileged instructions cause GPFs on WINDOWS, so we exit. */
     if (sys_getWindowsMode() != OS_PURE_DOS) {
-         vgacon_printError("FBTWEAK cannot run on Windows.\n");
+         con_error("FBTWEAK cannot run on Windows.\n");
          return -1;
     }
 
@@ -137,10 +137,10 @@ int main(int argc, char *argv[]) {
 
     if (argErr == ARGS_USAGE_PRINTED)               { return 0; }
 
-    vgacon_print("%s\n", versionString);
+    con_plain("%s\n", versionString);
 
     if (argErr != ARGS_SUCCESS && argErr != ARGS_NO_ARGUMENTS) {
-        vgacon_printError("User input error, quitting...\n");
+        con_error("User input error, quitting...\n");
         return (int) argErr;
     }
 

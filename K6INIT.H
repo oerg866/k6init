@@ -74,4 +74,4 @@ typedef struct {
 } k6init_SysInfo;
 
 
-#define retPrintErrorIf(condition, message, value) if (condition) { vgacon_printError(message "\n", value); return false; }
+#define retPrintErrorIf(condition, message, value) if (condition) { con_error(message "\n", value); return false; }
