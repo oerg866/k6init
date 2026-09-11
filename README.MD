@@ -75,7 +75,8 @@ For more information, check [the FBTWEAK documentation.](FBTWEAK.MD)
 * Microsoft MS-DOS 5.0 (or compatible) or higher
     * [X] Microsoft Windows 95/98 support
     * [X] FreeDOS support
-    * Other systems such as DR-DOS untested, but should work.
+    * [X] IBM PC DOS 7.x/2000 support
+    * Other systems such as DR-DOS untested, but should work, your mileage may wary when loading it from CONFIG.SYS though.
 
 # Running the Driver
 
@@ -262,59 +263,23 @@ See above for supported chipsets.
 
 ## Building
 
+### Required toolchain and library
+
+Building requires Microsoft C/C++ 7.00 or 8.00 (from MSVC 1.52). The latter allows building on modern windows systems, as the toolchain uses very early 32-Bit executables.
+
+The `MSC_Libs` folder must be copied on top of that installation. It contains the late Geoff Chappell's libraries for writing device drivers in C, from his book ["DOS Internals"](https://archive.org/details/dosinternals) - plus a fix for IBM PC DOS 7.xx.
+
+### Build command
 ```
 cd <somewhere>\k6init
 nmake
 ```
-
-That's all.
-
-### Debug build
 
 To make a build with a lot of verbose debug output, build it with `DEBUG=1`:
 
 ```
 nmake DEBUG=1
 ```
-
-### Borland and Watcom Compiler support
-
-While **Borland C/C++ 3.x**, **Borland Turbo C/C++ 3.0** and **OpenWatcom v2** are technically supported, the resulting executable will not be loadable in `CONFIG.SYS`. Use the following commands to compile them:
-
-#### Borland Turbo C/C++:
-
-`tcc -wall -g1 -Ilib866d -ek6init.exe lib866d\*.c k6init.c`
-
-#### Borland C/C++:
-`bcc -wall -g1 -Ilib866d -ek6init.exe lib866d\*.c k6init.c`
-
-#### OpenWatcom:
-`wcl -wcd111 -w9 -bt=dos -Ilib866d lib866d\*.c k6init.c`
-
-## Build environment issues
-
-I developed this on an AMD K6-II CXT 500MHz. DOS is not the most stable and easy to configure environment in the world and there are a few quirks to address.
-
-### Weird errors when building
-
-**USE HIMEM.SYS THAT COMES WITH MICROSOFT C/C++ 7.00!**
-
-You'll get weird errors otherwise. It's something to do with XMS size. I can get this to compile with JemmEx when limiting its reported size to 32MiB.
-
-QEMM '97 also works, but after a while I got really strange behavior. I cannot open K6init.h (and only that file) properly via network share anymore.
-
-### Linker doesn't run when DPMI host is running
-
-I couldn't really fix this, so I took the linker (`LINK.EXE` and `CVPACK.EXE`) from Microsoft Visual C++ 1.52. **NOTE:** The linker from VC1.52 requires a 32-Bit DOS Extender.
-VC1.52 includes one in the form of `DOSXNT.EXE`
-
-### CodeView doesn't run when DPMI host is running
-
-No idea. I don't use the debugger (yet) so at the moment it is not a big deal for me but it would be cool to fix this...?
-
-### Why don't you just use 386-MAX as suggested by Microsoft?
-
-Because when I load it, it reboots my computer. %-)
 
 # License
 
