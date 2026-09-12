@@ -244,32 +244,11 @@ See above for supported chipsets.
 
 ## Required Build Environment
 
-* MS-DOS 6.xx or 7.xx or Windows 95/98
-* Microsoft C / C++ Compiler Version 7.00 with latest patch set
-
-  ***or***
-  Microsoft C / C++ 8.00 (comes with Visual C++ 1.52).
-
-  In this case you need a 32-Bit DOS Extender such as HX-DOS or build on a modern windows machine.
-* `LIB` and `INCLUDE` directories from the **DOS Internals** disk bundled with *Geoff Chappell's* excellent book of the same name
-    Can be acquired here: https://www.pcjs.org/software/pcx86/sw/books/dos_internals/
-
-    I have requested permission from *Geoff Chappell* to bundle these files with the **K6INIT** repository, but have not yet received a response.
-* Updates for the above libraries from *Geoff Chappell's* website: https://www.geoffchappell.com/notes/dos/internals/crtdrvr/update.htm?ta=8.714286804199219&tx=6
-* DPMI host (not necessary on Windows)
-  * I use HXDPMI32 ([part of HXDOS by Japheth](https://www.japheth.de/HX.html)).
-
-*Note: Previous versions required the Microsoft Macro Assembler to build. As LIB866D includes macros that allow the usage of unsupported opcodes in inline assembly, this is no longer the case.*
-
-## Building
-
-### Required toolchain and library
-
 Building requires Microsoft C/C++ 7.00 or 8.00 (from MSVC 1.52). The latter allows building on modern windows systems, as the toolchain uses very early 32-Bit executables.
 
 The `MSC_Libs` folder must be copied on top of that installation. It contains the late Geoff Chappell's libraries for writing device drivers in C, from his book ["DOS Internals"](https://archive.org/details/dosinternals) - plus a fix for IBM PC DOS 7.xx.
 
-### Build command
+## Build command
 ```
 cd <somewhere>\k6init
 nmake
